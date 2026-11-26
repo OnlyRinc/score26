@@ -131,7 +131,7 @@ export function jerseyTextures(j: Jersey, name: string) {
         // Name in Bogenform wie auf echten Dart-Trikots
         ctx.font = `700 120px ${f.display}`;
         const w = ctx.measureText(shown).width;
-        const sx = Math.min(1, (W * 0.86) / w);
+        const sx = Math.min(1, (W * 0.7) / w);
         ctx.save(); ctx.translate(W / 2, H * 0.34); ctx.scale(sx, 1);
         ctx.textAlign = "center"; ctx.lineJoin = "round";
         ctx.lineWidth = 14; ctx.strokeStyle = j.accent === j.primary ? shade(j.primary, -0.4) : j.accent; ctx.strokeText(shown, 0, 0);

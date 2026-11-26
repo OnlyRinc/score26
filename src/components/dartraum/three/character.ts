@@ -272,8 +272,9 @@ export function buildCharacter(look: Look, name: string): Character {
 }
 
 // ---------------- Kopf ----------------
-function buildHead(head: THREE.Group, look: Look, m: { mSkin: THREE.Material; mSkinD: THREE.Material; mHair: THREE.Material; mDark: THREE.Material; mWhite: THREE.Material; hairC: string; track: <T extends { dispose: () => void }>(x: T) => T }) {
+export function buildHead(head: THREE.Group, look: Look, m: { mSkin: THREE.Material; mSkinD: THREE.Material; mHair: THREE.Material; mDark: THREE.Material; mWhite: THREE.Material; hairC: string; track: <T extends { dispose: () => void }>(x: T) => T }, opts = { face: true, beard: true }) {
   const R = 0.15;
+  if (opts.face) {
   const skull = mesh(new THREE.SphereGeometry(R, 32, 24), m.mSkin);
   skull.scale.set(1, 1.1, 1.02); head.add(skull);
   // Kinn/Kiefer etwas kantiger
@@ -291,6 +292,7 @@ function buildHead(head: THREE.Group, look: Look, m: { mSkin: THREE.Material; mS
   const nose = mesh(new THREE.SphereGeometry(0.022, 12, 10), m.mSkinD, 0, -0.03, 0.152); nose.scale.set(0.9, 1, 0.9); head.add(nose);
   const mouth = mesh(new THREE.TorusGeometry(0.03, 0.006, 6, 16, Math.PI), m.track(mat("#7a2e3e")), 0, -0.07, 0.14);
   mouth.rotation.z = Math.PI; head.add(mouth);
+  }
 
   // Haare
   const H = (geo: THREE.BufferGeometry, x = 0, y = 0, z = 0) => { const o = mesh(geo, m.mHair, x, y, z); head.add(o); return o; };
@@ -299,6 +301,7 @@ function buildHead(head: THREE.Group, look: Look, m: { mSkin: THREE.Material; mS
     o.scale.set(1.02, 1.12, 1.05); o.rotation.x = -tilt; return o;
   };
   switch (look.hair) {
+    case "none": break;
     case "short": cap(1.5, 0.55); break;
     case "fade": cap(1.2, 0.45); { const f = cap(1.7, 0.55, R + 0.002); (f.material as THREE.Material) = m.track(mat(shade(m.hairC, 0.0), { transparent: true, opacity: 0.45 })); } break;
     case "quiff": cap(1.45, 0.6); { const q = H(new THREE.SphereGeometry(0.075, 16, 12), 0, 0.15, 0.07); q.scale.set(1.5, 0.9, 1.1); q.rotation.x = -0.6; } break;
@@ -320,7 +323,7 @@ function buildHead(head: THREE.Group, look: Look, m: { mSkin: THREE.Material; mS
     b.scale.set(1.02, 1.12, 1.08); head.add(b); return b;
   };
   const stache = () => { const s = mesh(new THREE.CapsuleGeometry(0.014, 0.06, 4, 8), m.mHair, 0, -0.052, 0.152); s.rotation.z = Math.PI / 2; head.add(s); };
-  switch (look.beard) {
+  if (opts.beard) switch (look.beard) {
     case "stubble": lower(0.35); break;
     case "full": lower(1); stache(); break;
     case "mustache": stache(); break;

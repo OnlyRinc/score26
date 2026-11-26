@@ -1,0 +1,5 @@
+Spielerfigur und Animationen im Dartraum:
+- Universal Base Characters (Superhero Male) von Quaternius, https://quaternius.com
+- Universal Animation Library von Quaternius, https://quaternius.com
+Lizenz: CC0 1.0 Universal (Public Domain), https://creativecommons.org/publicdomain/zero/1.0/
+Für Score26 verkleinert und komprimiert.

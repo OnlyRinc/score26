@@ -3,11 +3,11 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import type { Look } from "@/lib/dartraum/catalog";
-import { buildCharacter, type Character } from "./three/character";
+import { buildPlayer, loadPlayerAssets, type Player } from "./three/player";
 
 export function Figure3D({ look, name, className = "", pose = "stand" }: { look: Look; name: string; className?: string; pose?: "stand" | "wave" }) {
   const wrap = useRef<HTMLDivElement>(null);
-  const st = useRef<{ scene: THREE.Scene; char?: Character; rot: number; drag: boolean; idle: number } | null>(null);
+  const st = useRef<{ scene: THREE.Scene; char?: Player; rot: number; drag: boolean; idle: number } | null>(null);
 
   useEffect(() => {
     const el = wrap.current!;
@@ -44,7 +44,7 @@ export function Figure3D({ look, name, className = "", pose = "stand" }: { look:
       raf = requestAnimationFrame(tick);
       const dt = clock.getDelta(), s = st.current!;
       if (!s.drag) { s.idle += dt; if (s.idle > 1.5) s.rot += dt * 0.45; }
-      if (s.char) { s.char.root.rotation.y = s.rot; s.char.update(pose_.current, 0, clock.elapsedTime, true); }
+      if (s.char) { s.char.root.rotation.y = s.rot; s.char.update(pose_.current, 0, clock.elapsedTime, true, dt); }
       renderer.render(scene, camera);
     };
     raf = requestAnimationFrame(tick);
@@ -68,9 +68,10 @@ export function Figure3D({ look, name, className = "", pose = "stand" }: { look:
 
   useEffect(() => {
     let cancelled = false;
-    const make = () => {
+    const make = async () => {
+      const assets = await loadPlayerAssets();
       const s = st.current; if (!s || cancelled) return;
-      const ch = buildCharacter(look, name);
+      const ch = buildPlayer(assets, look, name);
       s.char?.root.removeFromParent(); s.char?.dispose();
       s.scene.add(ch.root); s.char = ch;
     };

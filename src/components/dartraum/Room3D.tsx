@@ -8,7 +8,8 @@ import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import type { Look } from "@/lib/dartraum/catalog";
-import { buildCharacter, buildDart, type Character, type Pose3D } from "./three/character";
+import { buildDart, type Pose3D } from "./three/character";
+import { buildPlayer, loadPlayerAssets, type Player } from "./three/player";
 import { BOARD, OCHE_Z, buildRoom, type BuiltRoom } from "./three/room";
 
 // ---------------- Ablauf ----------------
@@ -48,7 +49,7 @@ export function Room3D({ level, look, name, trophies, medals }: { level: number;
   const wrap = useRef<HTMLDivElement>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
   const ctl = useRef({ zoom: 1.15, az: 0, target: new THREE.Vector3(4, 0.9, 4) });
-  const stage = useRef<{ scene: THREE.Scene; room?: BuiltRoom; char?: Character; resize: () => void } | null>(null);
+  const stage = useRef<{ scene: THREE.Scene; room?: BuiltRoom; char?: Player; resize: () => void } | null>(null);
   const [failed, setFailed] = useState(false);
 
   // Grundgerüst: Renderer, Kamera, Schleife
@@ -92,7 +93,7 @@ export function Room3D({ level, look, name, trophies, medals }: { level: number;
     let flyDart: THREE.Group | null = null;
     let dartsFor: unknown = null;
     const target = ctl.current.target;
-    (window as unknown as { __room3d?: unknown }).__room3d = ctl.current;
+    Object.assign(window as unknown as Record<string, unknown>, { __room3d: ctl.current, __sim: sim });
     const v = new THREE.Vector3();
 
     const clock = new THREE.Clock();
@@ -151,7 +152,7 @@ export function Room3D({ level, look, name, trophies, medals }: { level: number;
       char.root.position.set(sim.x, room.floorAt(sim.x, sim.z), sim.z);
       char.root.rotation.y = sim.rot;
       const holding = (sim.pose === "throw" && (sim.phase < 0.74 || sim.thrown < 3)) || sim.pose === "stand" || sim.pose === "walk";
-      char.update(sim.pose, sim.phase, time, holding && !(sim.pose === "throw" && sim.phase >= 0.74 && sim.phase < 1));
+      char.update(sim.pose, sim.phase, time, holding && !(sim.pose === "throw" && sim.phase >= 0.74 && sim.phase < 1), dt);
       // fliegender Pfeil
       if (flyDart) {
         if (sim.flying) {
@@ -233,9 +234,10 @@ export function Room3D({ level, look, name, trophies, medals }: { level: number;
   // Figur bei Look-Wechsel neu bauen (Schriften vorher laden, damit der Name sauber aufs Trikot kommt)
   useEffect(() => {
     let cancelled = false;
-    const make = () => {
+    const make = async () => {
+      const assets = await loadPlayerAssets();
       const st = stage.current; if (!st || cancelled) return;
-      const char = buildCharacter(look, name);
+      const char = buildPlayer(assets, look, name);
       if (st.char) { char.root.position.copy(st.char.root.position); char.root.rotation.copy(st.char.root.rotation); st.char.root.removeFromParent(); st.char.dispose(); }
       st.scene.add(char.root); st.char = char;
     };
