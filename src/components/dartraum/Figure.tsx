@@ -175,7 +175,7 @@ export function Figure({ look, name = "", view = "front", mirror = false, pose =
       <rect x="-3" y="13" width="6" height="16" rx="3" fill={skin} stroke={OUT} strokeWidth="1" />
       <rect x={side > 0 ? 0.6 : -3} y="14" width="2.4" height="14" rx="1.2" fill={skinD} opacity=".5" />
       <circle cx="0" cy="30" r="3.7" fill={skin} stroke={OUT} strokeWidth="1" />
-      {holding && <g transform="translate(0 31) rotate(-90) scale(0.2) translate(-60 0)"><Dart setup={look.darts} uid={`h${uid}`} /></g>}
+      {holding && <g transform="translate(0 31) rotate(90) scale(0.2) translate(-60 0)"><Dart setup={look.darts} uid={`h${uid}`} /></g>}
       {pose === "drink" && side === 1 && <g transform="translate(0 31)"><rect x="-3" y="-9" width="6" height="9" rx="1" fill="#ffd23f" stroke={OUT} strokeWidth=".8" /><rect x="-3" y="-9" width="6" height="2" fill="#fff" /></g>}
     </g>
   );

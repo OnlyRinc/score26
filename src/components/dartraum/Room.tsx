@@ -222,13 +222,20 @@ export function Room({ level, look, name, trophies, medals }: { level: number; l
   if (level >= 2) {
     const col = level >= 4 ? "#2b2b36" : "#7b8b7e";
     add("sofa-shadow", 0, <Shadow c={0.1} r={4.3} w={1.3} d={2.5} o={0.25} />);
-    add("sofa-back", 5.9, <Box c={0.1} r={4.5} w={0.4} d={2.0} h={38} color={shade(col, -0.05)} />);
-    add("sofa-base", 6.3, <Box c={0.5} r={4.55} w={0.85} d={1.9} h={9} color={shade(col, -0.15)} />);
-    add("sofa-c1", 6.0, <Box c={0.52} r={4.6} w={0.8} d={0.92} h={6} z={9} color={col} />);
-    add("sofa-c2", 6.9, <Box c={0.52} r={5.55} w={0.8} d={0.92} h={6} z={9} color={col} />);
-    add("sofa-arm1", 5.2, <Box c={0.1} r={4.3} w={1.3} d={0.3} h={22} color={shade(col, -0.05)} />);
+    // Couch als eine Gruppe in fester Malreihenfolge (hinten nach vorne), damit sich nichts falsch überdeckt
+    add("sofa", 6.0, (
+      <g>
+        <Box c={0.1} r={4.3} w={1.3} d={0.3} h={22} color={shade(col, -0.05)} />
+        <Box c={0.1} r={4.6} w={0.38} d={1.85} h={38} color={shade(col, -0.05)} />
+        <Box c={0.48} r={4.6} w={0.88} d={1.85} h={10} color={shade(col, -0.18)} />
+        <Box c={0.48} r={4.6} w={0.3} d={0.92} h={16} z={10} color={shade(col, 0.05)} />
+        <Box c={0.48} r={5.53} w={0.3} d={0.92} h={16} z={10} color={shade(col, 0.05)} />
+        <Box c={0.78} r={4.62} w={0.56} d={0.9} h={6} z={10} color={col} />
+        <Box c={0.78} r={5.53} w={0.56} d={0.9} h={6} z={10} color={col} />
+        {(() => { const p = iso(0.75, 5.0, 26); return <g><rect x={p.x - 7} y={p.y - 6} width="14" height="12" rx="4" fill={PINK} stroke={OUT} strokeWidth=".8" transform={`rotate(-12 ${p.x} ${p.y})`} /><text x={p.x} y={p.y + 2} textAnchor="middle" fontSize="6" fontFamily="var(--font-kaushan), cursive" fill="#fff">26</text></g>; })()}
+      </g>
+    ));
     add("sofa-arm2", 7.45, <Box c={0.1} r={6.45} w={1.3} d={0.3} h={22} color={shade(col, -0.05)} />);
-    add("pillow", 6.2, (() => { const p = iso(0.55, 4.95, 30); return <g><rect x={p.x - 7} y={p.y - 6} width="14" height="12" rx="4" fill={PINK} stroke={OUT} strokeWidth=".8" transform={`rotate(-12 ${p.x} ${p.y})`} /><text x={p.x} y={p.y + 2} textAnchor="middle" fontSize="6" fontFamily="var(--font-kaushan), cursive" fill="#fff">26</text></g>; })());
     add("bar-shadow", 0, <Shadow c={6.3} r={5.3} w={1.6} d={1.3} />);
     add("bar", 13.1, (
       <g>
@@ -435,8 +442,8 @@ export function Room({ level, look, name, trophies, medals }: { level: number; l
         <RightWall c={BOARD_C} z={BOARD_Z}><Board level={level} /></RightWall>
         {level === 0 && (() => { const p = iso(BOARD_C, 0.5, WALL); return <g><line x1={p.x} y1={p.y} x2={p.x} y2={p.y + 26} stroke="#222" /><circle cx={p.x} cy={p.y + 31} r="5.5" fill="#ffe9a8" style={{ filter: "drop-shadow(0 0 10px #ffe9a8)" }} /></g>; })()}
         {level >= 2 && (
-          <RightWall c={5.85} z={128}>
-            <text x="0" y="0" fontSize="27" fontFamily="var(--font-kaushan), cursive" fill={PINK} style={{ filter: `drop-shadow(0 0 4px ${PINK}) drop-shadow(0 0 10px ${PINK})` }}>Club<tspan fill={CYAN}>26</tspan></text>
+          <RightWall c={5.55} z={128}>
+            <text x="0" y="0" fontSize="22" fontFamily="var(--font-kaushan), cursive" fill={PINK} style={{ filter: `drop-shadow(0 0 4px ${PINK}) drop-shadow(0 0 10px ${PINK})` }}>Club<tspan fill={CYAN}>26</tspan></text>
           </RightWall>
         )}
         {level >= 1 && level <= 2 && (
