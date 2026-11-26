@@ -22,9 +22,9 @@ export default function TournamentsPage() {
     <Page>
       <PageHeader title="Turniere" back="/" right={<Button variant="primary" onClick={() => setOpen(true)}>+ Turnier</Button>} />
       {list.length === 0 ? <Empty>Noch kein Turnier. Tippe auf „+ Turnier“.</Empty> : (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="stagger grid gap-3 sm:grid-cols-2">
           {list.map((t) => (
-            <div key={t.id} className="flex items-center gap-2 rounded-2xl border border-line bg-surface p-2 pl-4">
+            <div key={t.id} className="tile flex items-center gap-2 rounded-2xl border border-line bg-gradient-to-br from-cyan/10 to-surface p-2 pl-4">
               <Link href={`/tournament/?id=${t.id}`} className="flex min-w-0 flex-1 items-center gap-4 py-2 active:scale-[0.99]">
                 {t.logo && <img src={t.logo} alt="" className="h-14 w-14 rounded-xl object-contain" />}
                 <div className="min-w-0">

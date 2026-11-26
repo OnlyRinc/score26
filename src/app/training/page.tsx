@@ -16,12 +16,12 @@ export default function TrainingHome() {
   return (
     <Page>
       <PageHeader title="Training" back="/" />
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="stagger grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {GAMES.map((g) => {
           const count = sessionsFor(trainings, g).filter((t) => t.finishedAt).length;
           return (
-            <Link key={g} href={`/training/new/?game=${g}`} className="group flex gap-4 rounded-3xl border border-line bg-gradient-to-br from-sage/20 to-surface p-5 active:scale-[0.98]">
-              <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-pink/20 font-display text-2xl font-bold text-pink">{GAME_INFO[g].short}</div>
+            <Link key={g} href={`/training/new/?game=${g}`} className="tile group flex gap-4 rounded-3xl border border-line bg-gradient-to-br from-pink-dark/25 to-surface p-5">
+              <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-pink/20 font-display text-2xl font-bold text-pink neon-text border border-pink/30">{GAME_INFO[g].short}</div>
               <div className="min-w-0">
                 <div className="font-display text-2xl uppercase">{GAME_INFO[g].name}</div>
                 <div className="text-sm text-muted">{GAME_INFO[g].desc}</div>

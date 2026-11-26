@@ -27,7 +27,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="de" className={`${inter.variable} ${oswald.variable} ${script.variable}`}>
-      <body className="antialiased min-h-dvh bg-stage">
+      <body className="antialiased min-h-dvh">
         {children}
         <ServiceWorker />
       </body>

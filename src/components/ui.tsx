@@ -10,14 +10,14 @@ export function cx(...c: (string | false | null | undefined)[]) {
 export function Wordmark({ className = "" }: { className?: string }) {
   return (
     <span className={cx("font-script leading-none select-none", className)}>
-      Score<span className="text-pink">26</span>
+      Score<span className="text-pink neon-text">26</span>
     </span>
   );
 }
 
 type BtnVariant = "primary" | "secondary" | "ghost" | "danger" | "sage";
 const variants: Record<BtnVariant, string> = {
-  primary: "bg-pink text-white hover:bg-pink/90 active:bg-pink-dark",
+  primary: "btn-primary shine text-white hover:brightness-110 active:brightness-90",
   secondary: "bg-surface-2 text-white border border-line hover:border-muted active:bg-line",
   ghost: "bg-transparent text-white/80 hover:bg-surface-2",
   danger: "bg-live/15 text-live border border-live/40 active:bg-live/30",
@@ -32,7 +32,7 @@ export function Button({
 }) {
   const sizes = { sm: "px-3 py-2 text-sm rounded-lg", md: "px-5 py-3 text-base rounded-xl", lg: "px-6 py-4 text-xl rounded-2xl" };
   const cls = cx(
-    "inline-flex items-center justify-center gap-2 font-semibold transition-colors disabled:opacity-40 disabled:pointer-events-none",
+    "inline-flex items-center justify-center gap-2 font-semibold transition-all duration-150 active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none",
     sizes[size], variants[variant], className,
   );
   if (href) return <Link href={href} className={cls}>{children}</Link>;
@@ -40,17 +40,17 @@ export function Button({
 }
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={cx("rounded-2xl border border-line bg-surface/90 p-4 sm:p-5", className)}>{children}</div>;
+  return <div className={cx("rise rounded-2xl border border-line bg-gradient-to-b from-surface-2/90 to-surface/90 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:p-5", className)}>{children}</div>;
 }
 
 export function PageHeader({ title, back, right }: { title: ReactNode; back?: string | true; right?: ReactNode }) {
   const router = useRouter();
   return (
-    <header className="sticky top-0 z-20 -mx-4 mb-4 flex items-center gap-3 border-b border-line bg-bg/85 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
+    <header className="header-line sticky top-0 z-20 -mx-4 mb-4 flex items-center gap-3 border-b border-transparent bg-bg/75 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
       {back && (
         <button
           onClick={() => (back === true ? router.back() : router.push(back))}
-          className="grid h-11 w-11 place-items-center rounded-xl bg-surface-2 text-2xl"
+          className="grid h-11 w-11 place-items-center rounded-xl border border-line bg-surface-2 text-2xl transition active:scale-90 active:border-pink"
           aria-label="Zurück"
         >
           ‹
@@ -78,9 +78,9 @@ export function Segmented<T extends string | number>({
           key={String(o.value)}
           onClick={() => onChange(o.value)}
           className={cx(
-            "whitespace-nowrap rounded-lg font-semibold transition-colors",
+            "whitespace-nowrap rounded-lg font-semibold transition-all duration-200 active:scale-95",
             size === "lg" ? "px-5 py-3 text-lg" : "px-3.5 py-2 text-sm",
-            o.value === value ? "bg-pink text-white" : "text-white/70 hover:text-white",
+            o.value === value ? "btn-primary text-white" : "text-white/70 hover:text-white",
           )}
         >
           {o.label}
@@ -95,9 +95,9 @@ export function Stepper({ value, onChange, min = 0, max = 99, step = 1, label }:
 }) {
   return (
     <div className="inline-flex items-center gap-2">
-      <button className="h-10 w-10 rounded-lg bg-surface-2 border border-line text-xl" onClick={() => onChange(Math.max(min, value - step))}>−</button>
+      <button className="h-10 w-10 rounded-lg bg-surface-2 border border-line text-xl transition active:scale-90 active:bg-pink/40" onClick={() => onChange(Math.max(min, value - step))}>−</button>
       <span className="min-w-12 text-center font-display text-xl tabular">{value}{label ? <span className="ml-1 text-sm text-muted">{label}</span> : null}</span>
-      <button className="h-10 w-10 rounded-lg bg-surface-2 border border-line text-xl" onClick={() => onChange(Math.min(max, value + step))}>+</button>
+      <button className="h-10 w-10 rounded-lg bg-surface-2 border border-line text-xl transition active:scale-90 active:bg-pink/40" onClick={() => onChange(Math.min(max, value + step))}>+</button>
     </div>
   );
 }
@@ -118,9 +118,9 @@ export const inputCls =
 export function Modal({ open, onClose, title, children, wide }: { open: boolean; onClose?: () => void; title?: ReactNode; children: ReactNode; wide?: boolean }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-4 backdrop-blur-sm" onClick={onClose}>
+    <div className="fade-in fixed inset-0 z-50 grid place-items-center bg-black/75 p-4 backdrop-blur-md" onClick={onClose}>
       <div
-        className={cx("animate-pop max-h-[92dvh] w-full overflow-auto rounded-3xl border border-line bg-surface p-5 sm:p-6", wide ? "max-w-3xl" : "max-w-lg")}
+        className={cx("animate-pop max-h-[92dvh] w-full overflow-auto rounded-3xl border border-pink/30 bg-gradient-to-b from-surface-2 to-surface p-5 shadow-[0_30px_80px_-20px_rgba(214,60,224,0.45)] sm:p-6", wide ? "max-w-3xl" : "max-w-lg")}
         onClick={(e) => e.stopPropagation()}
       >
         {title && <h2 className="mb-4 font-display text-2xl font-semibold uppercase tracking-wide">{title}</h2>}
@@ -135,5 +135,5 @@ export function Empty({ children }: { children: ReactNode }) {
 }
 
 export function Loading() {
-  return <div className="grid min-h-dvh place-items-center"><Wordmark className="text-5xl opacity-60" /></div>;
+  return <div className="grid min-h-dvh place-items-center"><Wordmark className="animate-pulse text-5xl opacity-70" /></div>;
 }
