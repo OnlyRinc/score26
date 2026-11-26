@@ -1,6 +1,6 @@
 // Offline-Unterstützung: Seiten und Dateien werden beim ersten Laden zwischengespeichert.
-const CACHE = "score26-v1";
-const PRECACHE = ["/", "/players/", "/play/", "/match/", "/tournaments/", "/tournament/", "/manifest.webmanifest"];
+const CACHE = "score26-v2";
+const PRECACHE = ["/", "/players/", "/play/", "/match/", "/tournaments/", "/tournament/", "/training/", "/training/new/", "/training/play/", "/manifest.webmanifest"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).catch(() => {}));

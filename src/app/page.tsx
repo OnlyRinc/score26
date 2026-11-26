@@ -20,6 +20,7 @@ export default function Home() {
   const tiles = [
     { href: "/play/", title: "Neues Spiel", sub: "Schnell ein Match zählen", accent: "from-pink/30" },
     { href: "/tournaments/", title: "Turniere", sub: "Gruppen, KO-Baum, Spielplan", accent: "from-cyan/20" },
+    { href: "/training/", title: "Training", sub: "121, 99 Darts, Bob's 27 …", accent: "from-pink/20" },
     { href: "/players/", title: "Spieler", sub: "Anlegen und verwalten", accent: "from-sage/30" },
   ];
 
@@ -30,7 +31,7 @@ export default function Home() {
         <p className="mt-3 font-display text-lg uppercase tracking-[0.3em] text-muted">Dart Counter</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {tiles.map((t) => (
           <Link key={t.href} href={t.href} className={`rounded-3xl border border-line bg-gradient-to-br ${t.accent} to-surface p-6 transition-transform active:scale-[0.98]`}>
             <div className="font-display text-3xl font-semibold uppercase">{t.title}</div>

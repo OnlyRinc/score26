@@ -4,13 +4,21 @@ import { persist } from "zustand/middleware";
 import { nanoid } from "nanoid";
 import type { MatchSetup, Visit } from "@/lib/game";
 import { DEFAULT_TIEBREAKERS } from "@/lib/tournament";
-import type { FixtureResult, Player, Settings, StoredMatch, Tournament } from "./types";
+import type { FixtureResult, Player, Settings, StoredMatch, Tournament, TrainingSession } from "./types";
+import type { TrainingEvent, TrainingSettings } from "@/lib/training/training";
 
 export interface AppState {
   players: Record<string, Player>;
   matches: Record<string, StoredMatch>;
   tournaments: Record<string, Tournament>;
+  trainings: Record<string, TrainingSession>;
   settings: Settings;
+
+  createTraining(settings: TrainingSettings, playerId: string | undefined, playerName: string): string;
+  addTrainingEvent(id: string, e: TrainingEvent): void;
+  undoTrainingEvent(id: string): void;
+  finishTraining(id: string): void;
+  deleteTraining(id: string): void;
 
   addPlayer(p: Omit<Player, "id" | "createdAt">): string;
   updatePlayer(id: string, p: Partial<Player>): void;
@@ -39,6 +47,7 @@ export const useStore = create<AppState>()(
       players: {},
       matches: {},
       tournaments: {},
+      trainings: {},
       settings: { inputMode: "total", speech: false, handicapPointsPer10: 50, askDoubles: true },
 
       addPlayer(p) {
@@ -138,6 +147,40 @@ export const useStore = create<AppState>()(
           if (result) map[key] = result;
           else delete map[key];
           return { tournaments: { ...s.tournaments, [tid]: { ...t, [field]: map } } };
+        });
+      },
+
+      createTraining(settings, playerId, playerName) {
+        const id = nanoid(10);
+        set((s) => ({ trainings: { ...s.trainings, [id]: { id, settings, playerId, playerName, events: [], createdAt: Date.now() } } }));
+        return id;
+      },
+      addTrainingEvent(id, e) {
+        set((s) => {
+          const t = s.trainings[id];
+          if (!t) return s;
+          return { trainings: { ...s.trainings, [id]: { ...t, events: [...t.events, e] } } };
+        });
+      },
+      undoTrainingEvent(id) {
+        set((s) => {
+          const t = s.trainings[id];
+          if (!t || !t.events.length) return s;
+          return { trainings: { ...s.trainings, [id]: { ...t, events: t.events.slice(0, -1), finishedAt: undefined } } };
+        });
+      },
+      finishTraining(id) {
+        set((s) => {
+          const t = s.trainings[id];
+          if (!t) return s;
+          return { trainings: { ...s.trainings, [id]: { ...t, finishedAt: t.finishedAt ?? Date.now() } } };
+        });
+      },
+      deleteTraining(id) {
+        set((s) => {
+          const trainings = { ...s.trainings };
+          delete trainings[id];
+          return { trainings };
         });
       },
 

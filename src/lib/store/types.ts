@@ -1,5 +1,6 @@
 import type { InRule, MatchFormat, MatchSetup, OutRule, PlayerRules, Visit } from "@/lib/game";
 import type { MatchResult, Tiebreaker } from "@/lib/tournament";
+import type { TrainingEvent, TrainingSettings } from "@/lib/training/training";
 
 export interface Player {
   id: string;
@@ -77,4 +78,14 @@ export interface Settings {
   sounds?: boolean;
   handicapPointsPer10: number;
   askDoubles: boolean;
+}
+
+export interface TrainingSession {
+  id: string;
+  settings: TrainingSettings;
+  playerId?: string;
+  playerName: string;
+  events: TrainingEvent[];
+  createdAt: number;
+  finishedAt?: number;
 }
