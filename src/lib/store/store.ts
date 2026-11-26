@@ -6,6 +6,16 @@ import type { MatchSetup, Visit } from "@/lib/game";
 import { DEFAULT_TIEBREAKERS } from "@/lib/tournament";
 import type { FixtureResult, Player, Settings, StoredMatch, Tournament, TrainingSession } from "./types";
 import type { TrainingEvent, TrainingSettings } from "@/lib/training/training";
+import { DEFAULT_LOOK, type Look } from "@/lib/dartraum/catalog";
+
+/** Dartraum-Profil eines Spielers. Verdiente Coins werden aus den Spielen berechnet, hier steht nur, was ausgegeben wurde. */
+export interface DartraumProfile {
+  look: Look;
+  owned: string[];
+  spent: number;
+  room: number;
+}
+export const emptyProfile = (): DartraumProfile => ({ look: { ...DEFAULT_LOOK }, owned: [], spent: 0, room: 0 });
 
 export interface AppState {
   players: Record<string, Player>;
@@ -13,6 +23,12 @@ export interface AppState {
   tournaments: Record<string, Tournament>;
   trainings: Record<string, TrainingSession>;
   settings: Settings;
+  dartraum: Record<string, DartraumProfile>;
+
+  setLook(playerId: string, patch: Partial<Look>): void;
+  /** Kauf mit Preis; prüft den Kontostand nicht, das macht die Oberfläche */
+  buyItem(playerId: string, itemId: string, price: number): void;
+  buyRoom(playerId: string, level: number, price: number): void;
 
   createTraining(settings: TrainingSettings, playerId: string | undefined, playerName: string): string;
   addTrainingEvent(id: string, e: TrainingEvent): void;
@@ -48,6 +64,7 @@ export const useStore = create<AppState>()(
       matches: {},
       tournaments: {},
       trainings: {},
+      dartraum: {},
       settings: { inputMode: "total", speech: false, handicapPointsPer10: 50, askDoubles: true },
 
       addPlayer(p) {
@@ -181,6 +198,27 @@ export const useStore = create<AppState>()(
           const trainings = { ...s.trainings };
           delete trainings[id];
           return { trainings };
+        });
+      },
+
+      setLook(pid, patch) {
+        set((s) => {
+          const pr = s.dartraum[pid] ?? emptyProfile();
+          return { dartraum: { ...s.dartraum, [pid]: { ...pr, look: { ...pr.look, ...patch } } } };
+        });
+      },
+      buyItem(pid, itemId, price) {
+        set((s) => {
+          const pr = s.dartraum[pid] ?? emptyProfile();
+          if (pr.owned.includes(itemId)) return s;
+          return { dartraum: { ...s.dartraum, [pid]: { ...pr, owned: [...pr.owned, itemId], spent: pr.spent + price } } };
+        });
+      },
+      buyRoom(pid, level, price) {
+        set((s) => {
+          const pr = s.dartraum[pid] ?? emptyProfile();
+          if (pr.room >= level) return s;
+          return { dartraum: { ...s.dartraum, [pid]: { ...pr, room: level, spent: pr.spent + price } } };
         });
       },
 

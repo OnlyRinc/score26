@@ -21,6 +21,7 @@ export default function Home() {
     { href: "/play/", title: "Neues Spiel", sub: "Schnell ein Match zählen", icon: "🎯", accent: "from-pink/35", ring: "text-pink" },
     { href: "/tournaments/", title: "Turniere", sub: "Gruppen, KO-Baum, Spielplan", icon: "🏆", accent: "from-cyan/25", ring: "text-cyan" },
     { href: "/training/", title: "Training", sub: "121, 99 Darts, Bob's 27 …", icon: "💪", accent: "from-pink-dark/40", ring: "text-pink" },
+    { href: "/dartraum/", title: "Mein Dartraum", sub: "Coins, Avatar, Raum ausbauen", icon: "🏠", accent: "from-[#e8c25a]/25", ring: "text-[#e8c25a]" },
     { href: "/players/", title: "Spieler", sub: "Anlegen und verwalten", icon: "👥", accent: "from-sage/35", ring: "text-sage" },
   ];
 
@@ -34,7 +35,7 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {tiles.map((t) => (
           <Link key={t.href} href={t.href} className={`tile group overflow-hidden rounded-3xl border border-line bg-gradient-to-br ${t.accent} to-surface p-6`}>
             <div className="mb-6 flex items-start justify-between">
