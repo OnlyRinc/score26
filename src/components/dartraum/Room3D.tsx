@@ -43,6 +43,9 @@ interface Sim {
   stuck: { x: number; y: number }[]; flying: { from: THREE.Vector3; to: [number, number]; t: number } | null; bubble: string | null; thrown: number;
 }
 
+/** Laufgeschwindigkeit passend zur Schrittlänge der Lauf-Animation (sonst rutschen die Füße) */
+const WALK_SPEED = 0.84;
+
 const lerpAngle = (a: number, b: number, k: number) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return a + d * k; };
 
 export function Room3D({ level, look, name, trophies, medals }: { level: number; look: Look; name: string; trophies: number; medals: number }) {
@@ -126,7 +129,7 @@ export function Room3D({ level, look, name, trophies, medals }: { level: number;
         const dx = tx - sim.x, dz = tz - sim.z, dist2 = Math.hypot(dx, dz);
         if (dist2 < 0.02) { sim.x = tx; sim.z = tz; sim.tasks.shift(); sim.t = 0; }
         else {
-          const k = Math.min(1, (1.25 * dt) / dist2);
+          const k = Math.min(1, (WALK_SPEED * dt) / dist2);
           sim.x += dx * k; sim.z += dz * k;
           sim.rot = lerpAngle(sim.rot, Math.atan2(dx, dz), Math.min(1, dt * 10));
           sim.pose = "walk"; sim.phase = (sim.phase + dt * 1.55) % 1;

@@ -89,12 +89,11 @@ function paintBody(geo: THREE.BufferGeometry, look: Look, name: string, body: Bo
       if (ax < 0.425) return cuff;
       return skinPx;
     }
-    if (y > 1.56 || (y > 1.5 && ax < 0.075)) {
-      return skinPx;
-    }
-    // Kragen-Ausschnitt
-    // Kragen als schmaler Ring um den Hals
-    if (y > 1.47 && ax < 0.1) return collar;
+    if (y > 1.56) return skinPx;
+    // Runder Halsausschnitt: vorne tiefer als hinten, mit schmalem Bündchen
+    const cut = (z > 0 ? 1.46 : 1.485) + (ax / 0.085) ** 2 * 0.05;
+    if (y > cut + 0.016) return skinPx;
+    if (y > cut) return collar;
     if (y > 0.99) {
       // Trikot: vorne, hinten, Seiten
       const v = Math.min(0.999, Math.max(0, (1.5 - y) / 0.5));
@@ -301,7 +300,7 @@ export function buildPlayer(assets: Assets, look: Look, name: string): Player {
     if (n === current) return;
     const next = action(n); if (!next) return;
     const prev = current ? actions.get(current) : null;
-    next.reset(); next.setEffectiveWeight(1); next.play();
+    next.reset(); next.setEffectiveWeight(1); next.timeScale = n === "Walk_Loop" ? 1.4 : 1; next.play();
     if (prev) next.crossFadeFrom(prev, 0.3, false);
     current = n;
   };
