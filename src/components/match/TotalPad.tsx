@@ -37,7 +37,7 @@ export function TotalPad({ onSubmit, remaining, canCheckout, onUndo }: {
     return () => window.removeEventListener("keydown", h);
   }, [onSubmit]);
 
-  const key = "rounded-2xl bg-surface-2 border border-line font-display text-[min(5.2vh,2.6rem)] font-semibold active:bg-pink/40 active:scale-[0.97] transition";
+  const key = "rounded-2xl bg-surface-2 border border-line font-display text-[min(5.2vh,8vw,2.6rem)] font-semibold active:bg-pink/40 active:scale-[0.97] transition";
 
   return (
     <div className="flex h-full gap-2 sm:gap-3">
@@ -52,7 +52,7 @@ export function TotalPad({ onSubmit, remaining, canCheckout, onUndo }: {
         <button className={cx(key, "text-muted")} onClick={() => setInput((s) => s.slice(0, -1))}>⌫</button>
         <button className={key} onClick={() => setInput((s) => (s.length < 3 && s !== "" ? s + "0" : s))}>0</button>
         <button
-          className={cx("rounded-2xl font-display text-[min(4.5vh,2.2rem)] font-bold uppercase transition active:scale-[0.97]", input === "" ? "bg-sage-dark text-white" : valid ? "bg-pink text-white" : "bg-surface-2 text-muted")}
+          className={cx("rounded-2xl font-display text-[min(4.5vh,5vw,2.2rem)] font-bold uppercase transition active:scale-[0.97]", input === "" ? "bg-sage-dark text-white" : valid ? "bg-pink text-white" : "bg-surface-2 text-muted")}
           onClick={() => (input === "" ? submit(0) : valid && submit(value!))}
         >
           {input === "" ? "No Score" : "OK"}
@@ -60,18 +60,18 @@ export function TotalPad({ onSubmit, remaining, canCheckout, onUndo }: {
       </div>
       <div className="grid flex-[2] grid-cols-2 grid-rows-6 gap-2 sm:gap-3">
         {QUICK.map((q) => (
-          <button key={q} onClick={() => submit(q)} className={cx("rounded-2xl border border-line font-display text-[min(4vh,2rem)] font-semibold active:scale-[0.97] transition", q >= 100 ? "bg-pink/15 active:bg-pink/40" : "bg-surface active:bg-line")}>
+          <button key={q} onClick={() => submit(q)} className={cx("rounded-2xl border border-line font-display text-[min(4vh,6vw,2rem)] font-semibold active:scale-[0.97] transition", q >= 100 ? "bg-pink/15 active:bg-pink/40" : "bg-surface active:bg-line")}>
             {q}
           </button>
         ))}
         <button
           disabled={!canCheckout}
           onClick={() => submit(remaining)}
-          className="rounded-2xl bg-cyan/20 font-display text-[min(3.6vh,1.8rem)] font-bold uppercase text-cyan active:scale-[0.97] disabled:opacity-25"
+          className="rounded-2xl bg-cyan/20 font-display text-[min(3.6vh,4.2vw,1.8rem)] font-bold uppercase text-cyan active:scale-[0.97] disabled:opacity-25"
         >
           Check {canCheckout ? remaining : ""}
         </button>
-        <button onClick={onUndo} className="col-span-2 rounded-2xl border border-live/40 bg-live/10 font-display text-[min(3.6vh,1.8rem)] font-semibold uppercase text-live active:bg-live/30">
+        <button onClick={onUndo} className="col-span-2 rounded-2xl border border-live/40 bg-live/10 font-display text-[min(3.6vh,4.5vw,1.8rem)] font-semibold uppercase text-live active:bg-live/30">
           ↶ Rückgängig
         </button>
       </div>

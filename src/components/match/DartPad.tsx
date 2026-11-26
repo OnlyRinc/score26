@@ -10,9 +10,9 @@ export function DartPad({ darts, onDart, onUndo }: { darts: Dart[]; onDart: (d: 
     onDart({ segment, multiplier: m });
     setMult(1);
   };
-  const key = "rounded-xl bg-surface-2 border border-line font-display text-[min(4.4vh,2.2rem)] font-semibold active:scale-[0.96] transition";
+  const key = "rounded-xl bg-surface-2 border border-line font-display text-[min(4.4vh,5vw,2.2rem)] font-semibold active:scale-[0.96] transition";
   const multBtn = (m: 1 | 2 | 3, label: string, color: string) => (
-    <button onClick={() => setMult(mult === m ? 1 : m)} className={cx("rounded-xl font-display text-[min(4vh,2rem)] font-bold uppercase transition", mult === m ? color : "bg-surface-2 border border-line text-white/70")}>
+    <button onClick={() => setMult(mult === m ? 1 : m)} className={cx("rounded-xl font-display text-[min(4vh,5vw,2rem)] font-bold uppercase transition", mult === m ? color : "bg-surface-2 border border-line text-white/70")}>
       {label}
     </button>
   );

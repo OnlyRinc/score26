@@ -172,15 +172,15 @@ function MatchScreen() {
     <div className="flex h-dvh flex-col gap-2 overflow-hidden p-2 sm:gap-3 sm:p-3">
       <div className="flex items-center gap-2">
         <button onClick={() => router.push(backHref)} className="grid h-10 w-10 place-items-center rounded-xl bg-surface-2 text-2xl" aria-label="Zurück">‹</button>
-        <div className="flex-1 truncate font-display text-sm uppercase tracking-widest text-muted">
+        <div className="min-w-0 flex-1 truncate font-display text-sm uppercase tracking-widest text-muted">
           {formatLabel(match.setup.format)} · {state.isSetPlay ? `Set ${state.set + 1} · ` : ""}Leg {state.leg + 1}
         </div>
         <Segmented value={settings.inputMode} onChange={(inputMode) => { setPartial([]); updateSettings({ inputMode }); }}
-          options={[{ value: "total", label: "Summe" }, { value: "darts", label: "Dart für Dart" }]} />
+          options={[{ value: "total", label: "Summe" }, { value: "darts", label: "Dart für Dart" }]} className="shrink-0 !flex-nowrap" />
         <button onClick={() => updateSettings({ speech: !settings.speech })} className={cx("h-10 rounded-xl px-3 text-lg", settings.speech ? "bg-pink/30" : "bg-surface-2 opacity-60")} aria-label="Sprachausgabe">
           {settings.speech ? "🔊" : "🔇"}
         </button>
-        <button onClick={() => setStatsOpen(true)} className="h-10 rounded-xl bg-surface-2 px-3 text-sm font-semibold">Statistik</button>
+        <button onClick={() => setStatsOpen(true)} className="h-10 rounded-xl bg-surface-2 px-3 text-sm font-semibold">📊<span className="hidden sm:inline"> Statistik</span></button>
       </div>
 
       <div className={cx("grid min-h-0 gap-2 sm:gap-3", n === 1 ? "grid-cols-1" : n === 2 ? "grid-cols-2" : n === 3 ? "grid-cols-3" : "grid-cols-2 grid-rows-2", "flex-[1_1_44%]")}>

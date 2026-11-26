@@ -78,7 +78,7 @@ export function Segmented<T extends string | number>({
           key={String(o.value)}
           onClick={() => onChange(o.value)}
           className={cx(
-            "rounded-lg font-semibold transition-colors",
+            "whitespace-nowrap rounded-lg font-semibold transition-colors",
             size === "lg" ? "px-5 py-3 text-lg" : "px-3.5 py-2 text-sm",
             o.value === value ? "bg-pink text-white" : "text-white/70 hover:text-white",
           )}
