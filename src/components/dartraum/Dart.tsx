@@ -4,7 +4,7 @@ import { BARREL_FINISH, SHAFT_LENGTHS, type DartSetup } from "@/lib/dartraum/cat
 
 const OUT = "#15101c";
 
-function profile(shape: DartSetup["barrel"], t: number): number {
+export function profile(shape: DartSetup["barrel"], t: number): number {
   let r: number;
   switch (shape) {
     case "torpedo": r = 3.0 + 1.9 * Math.pow(t, 0.8); break;
@@ -20,7 +20,7 @@ function profile(shape: DartSetup["barrel"], t: number): number {
   return r;
 }
 
-function flightPath(shape: DartSetup["flight"], len: number, top: boolean): string {
+export function flightPath(shape: DartSetup["flight"], len: number, top: boolean): string {
   const s = top ? -1 : 1;
   const y = (v: number) => (s * v).toFixed(2);
   const L = len;

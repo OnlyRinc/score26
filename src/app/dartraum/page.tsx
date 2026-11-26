@@ -12,7 +12,9 @@ import {
 } from "@/lib/dartraum/catalog";
 import { Figure, FigureCard } from "@/components/dartraum/Figure";
 import { DartImage } from "@/components/dartraum/Dart";
-import { Room } from "@/components/dartraum/Room";
+import dynamic from "next/dynamic";
+const Figure3DLazy = dynamic(() => import("@/components/dartraum/Figure3D").then((m) => m.Figure3D), { ssr: false, loading: () => <div className="h-[340px]" /> });
+const Room3D = dynamic(() => import("@/components/dartraum/Room3D").then((m) => m.Room3D), { ssr: false, loading: () => <div className="grid aspect-[4/3] place-items-center rounded-3xl border border-line text-muted sm:aspect-[16/10]">3D-Raum wird geladen …</div> });
 import { Button, Card, Empty, Loading, Page, PageHeader, Segmented, cx, inputCls } from "@/components/ui";
 
 export default function DartraumPage() {
@@ -109,7 +111,7 @@ function Profile({ pid }: { pid: string }) {
 
       {tab === "room" && (
         <div className="space-y-4">
-          <Room level={lvl.level} look={look} name={name} trophies={e.facts.tournamentsWon.length} medals={unlocked.size} />
+          <Room3D level={lvl.level} look={look} name={name} trophies={e.facts.tournamentsWon.length} medals={unlocked.size} />
           <Card>
             <div className="mb-3 text-xs uppercase tracking-widest text-muted">Raumstufe wählen</div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
@@ -240,11 +242,7 @@ function Wardrobe({ pid, look, defaultName }: { pid: string; look: Look; default
   return (
     <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
       <Card className="text-center lg:sticky lg:top-24 lg:self-start">
-        <div className="flex justify-center gap-1">
-          <FigureCard look={look} name={name} uid="wf" size={150} className="h-auto w-1/2 max-w-[160px]" />
-          <FigureCard look={look} name={name} uid="wb" size={150} view="back" className="h-auto w-1/2 max-w-[160px]" />
-        </div>
-        <div className="mt-1 flex justify-around text-[10px] uppercase tracking-widest text-muted"><span>Vorne</span><span>Hinten</span></div>
+        <Figure3DLazy look={look} name={name} className="mx-auto h-[340px] w-full overflow-hidden rounded-2xl bg-[radial-gradient(ellipse_at_50%_35%,#2c2140_0%,#14101b_70%)]" />
         <div className="mt-3 rounded-xl bg-surface-2/60 p-2">
           <DartImage setup={look.darts} uid="wd" className="h-auto w-full" />
         </div>
