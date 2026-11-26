@@ -1,103 +1,75 @@
-import Image from "next/image";
+"use client";
+import Link from "next/link";
+import { computeMatch } from "@/lib/game";
+import { useHydrated, useStore } from "@/lib/store/store";
+import { Loading, Page, Wordmark } from "@/components/ui";
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const hydrated = useHydrated();
+  const matches = useStore((s) => s.matches);
+  const tournaments = useStore((s) => s.tournaments);
+  if (!hydrated) return <Loading />;
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+  const running = Object.values(matches)
+    .filter((m) => !m.finishedAt && m.visits.length > 0 && !computeMatch(m.setup, m.visits).finished)
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, 4);
+  const activeTournaments = Object.values(tournaments).filter((t) => t.status !== "done").sort((a, b) => b.createdAt - a.createdAt);
+
+  const tiles = [
+    { href: "/play/", title: "Neues Spiel", sub: "Schnell ein Match zählen", accent: "from-pink/30" },
+    { href: "/tournaments/", title: "Turniere", sub: "Gruppen, KO-Baum, Spielplan", accent: "from-cyan/20" },
+    { href: "/players/", title: "Spieler", sub: "Anlegen und verwalten", accent: "from-sage/30" },
+  ];
+
+  return (
+    <Page className="pt-10">
+      <div className="mb-10 text-center">
+        <Wordmark className="text-7xl sm:text-8xl" />
+        <p className="mt-3 font-display text-lg uppercase tracking-[0.3em] text-muted">Dart Counter</p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        {tiles.map((t) => (
+          <Link key={t.href} href={t.href} className={`rounded-3xl border border-line bg-gradient-to-br ${t.accent} to-surface p-6 transition-transform active:scale-[0.98]`}>
+            <div className="font-display text-3xl font-semibold uppercase">{t.title}</div>
+            <div className="mt-1 text-muted">{t.sub}</div>
+          </Link>
+        ))}
+      </div>
+
+      {activeTournaments.length > 0 && (
+        <section className="mt-10">
+          <h2 className="mb-3 font-display text-xl uppercase tracking-wide text-muted">Laufende Turniere</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {activeTournaments.map((t) => (
+              <Link key={t.id} href={`/tournament/?id=${t.id}`} className="rounded-2xl border border-line bg-surface p-4 active:scale-[0.99]">
+                <div className="font-display text-2xl uppercase">{t.name}</div>
+                <div className="text-sm text-muted">{t.date} · {t.playerIds.length} Spieler</div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {running.length > 0 && (
+        <section className="mt-10">
+          <h2 className="mb-3 font-display text-xl uppercase tracking-wide text-muted">Weiterspielen</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {running.map((m) => {
+              const st = computeMatch(m.setup, m.visits);
+              return (
+                <Link key={m.id} href={`/match/?id=${m.id}`} className="rounded-2xl border border-line bg-surface p-4">
+                  <div className="font-display text-xl uppercase">{m.setup.players.map((p) => p.nickname).join(" vs ")}</div>
+                  <div className="text-sm text-muted tabular">
+                    {st.isSetPlay ? `Sets ${st.players.map((p) => p.sets).join(":")} · ` : ""}Legs {st.players.map((p) => p.legs).join(":")}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
+    </Page>
   );
 }
