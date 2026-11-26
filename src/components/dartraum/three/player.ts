@@ -11,7 +11,7 @@ import { jerseyTextures, shade } from "./textures";
 
 const BASE = "/models/dartraum/";
 
-interface Assets { scene: THREE.Group; clips: Map<string, THREE.AnimationClip>; skin: ImageData }
+interface Assets { scene: THREE.Group; clips: Map<string, THREE.AnimationClip>; skin: ImageData; hair: THREE.Group }
 let assetsPromise: Promise<Assets> | null = null;
 
 export function loadPlayerAssets(): Promise<Assets> {
@@ -21,12 +21,13 @@ export function loadPlayerAssets(): Promise<Assets> {
   assetsPromise = Promise.all([
     loader.loadAsync(BASE + "player.glb"),
     loader.loadAsync(BASE + "anims.glb"),
+    loader.loadAsync(BASE + "hair.glb"),
     new Promise<ImageData>((res, rej) => {
       const img = new Image();
       img.onload = () => { const c = document.createElement("canvas"); c.width = img.width; c.height = img.height; const x = c.getContext("2d")!; x.drawImage(img, 0, 0); res(x.getImageData(0, 0, c.width, c.height)); };
       img.onerror = rej; img.src = BASE + "skin.webp";
     }),
-  ]).then(([p, a, skin]) => ({ scene: p.scene, clips: new Map(a.animations.map((c) => [c.name, c])), skin }));
+  ]).then(([p, a, h, skin]) => ({ scene: p.scene, clips: new Map(a.animations.map((c) => [c.name, c])), skin, hair: h.scene }));
   assetsPromise.catch(() => { assetsPromise = null; });
   return assetsPromise;
 }
@@ -85,15 +86,10 @@ function paintBody(geo: THREE.BufferGeometry, look: Look, name: string, skinImg:
     }
     if (y > 1.56 || (y > 1.5 && ax < 0.075)) {
       // Kopf und Hals: Bart in die Haut malen
-      const beardTone = mix(skinPx, hairC, 0.9);
       const face = z > 0.0 && y < 1.672 && y > 1.56;
       const b = look.beard;
-      if (b === "stubble" && face && y < 1.655) return mix(skinPx, hairC, 0.38);
-      if (b === "full" && face && (y < 1.655 || (y < 1.67 && ax > 0.075))) return beardTone;
-      if ((b === "mustache" || b === "goatee" || b === "full") && z > 0.06 && y > 1.628 && y < 1.648 && ax < 0.035) return beardTone;
-      if ((b === "goatee" || b === "chin") && z > 0.04 && y > 1.565 && y < 1.615 && ax < (b === "chin" ? 0.025 : 0.032)) return beardTone;
-      // kurze Haare als Schatten auf dem Kopf (Fade, Buzzcut, Iro-Seiten)
-      if ((look.hair === "buzz" || look.hair === "fade" || look.hair === "mohawk") && y > 1.735 - (z < 0 ? 0.09 : 0) && !(z > 0.06 && y < 1.77)) return mix(skinPx, hairC, look.hair === "fade" ? 0.75 : 0.6);
+      // Dreitagebart als Schatten; unter dem Vollbart-Modell dunkler, damit keine Haut durchblitzt
+      if ((b === "stubble" || b === "full") && face && y < 1.655) return mix(skinPx, hairC, b === "full" ? 0.6 : 0.38);
       return skinPx;
     }
     // Kragen-Ausschnitt
@@ -166,6 +162,10 @@ export interface Player {
   dispose: () => void;
 }
 
+/** Welche fertige Frisur zu welcher Auswahl gehört */
+// Lang und Dutt haben oben keinen Ansatz: dafür den Buzzcut darunterlegen
+const HAIR_MODEL: Record<string, string[]> = { short: ["Hair_SimpleParted"], buzz: ["Hair_Buzzed"], long: ["Hair_Long", "Hair_Buzzed"], bun: ["Hair_Buns", "Hair_Buzzed"], bald: [] };
+
 const CLIP: Record<Pose3D, string> = {
   stand: "Idle_Loop", walk: "Walk_Loop", throw: "Idle_Loop", collect: "PickUp_Table", sit: "Sitting_Idle_Loop",
   desk: "Sitting_Talking_Loop", drink: "Idle_Talking_Loop", wave: "Interact",
@@ -202,8 +202,22 @@ export function buildPlayer(assets: Assets, look: Look, name: string): Player {
   const headGroup = new THREE.Group();
   const mSkin = track(new THREE.MeshStandardMaterial({ color: SKIN_TONES[look.skin] ?? SKIN_TONES[1] }));
   const mDark = track(new THREE.MeshStandardMaterial({ color: "#1a1414" })), mWhite = track(new THREE.MeshStandardMaterial({ color: "#ffffff" }));
-  const hairLook: Look = { ...look, hair: ["buzz", "fade", "bald"].includes(look.hair) ? "none" : look.hair };
-  buildHead(headGroup, hairLook, { mSkin, mSkinD: mSkin, mHair: hairMat, mDark, mWhite, hairC: HAIR_COLORS[look.hairColor] ?? HAIR_COLORS[1], track }, { face: false, beard: false });
+  // Frisur und Bart: fertige Modelle, eingefärbt in der Haarfarbe
+  const hairTint = new THREE.Color(HAIR_COLORS[look.hairColor] ?? HAIR_COLORS[1]).multiplyScalar(1.35);
+  const pieces = [...(HAIR_MODEL[look.hair] ?? []), look.beard === "full" ? "Hair_Beard" : undefined];
+  for (const piece of pieces) {
+    const srcNode = piece && assets.hair.getObjectByName(piece);
+    if (!srcNode) continue;
+    const h = srcNode.clone(true);
+    h.traverse((o) => {
+      const m = o as THREE.Mesh; if (!m.isMesh) return;
+      const src = m.material as THREE.MeshStandardMaterial;
+      const mat = track(src.clone()); mat.color.copy(hairTint); mat.roughness = 0.8; mat.metalness = 0;
+      m.material = mat; m.castShadow = true;
+    });
+    model.add(h); h.updateMatrixWorld(true); head.attach(h);
+  }
+  buildHead(headGroup, { ...look, hair: "none" }, { mSkin, mSkinD: mSkin, mHair: hairMat, mDark, mWhite, hairC: HAIR_COLORS[look.hairColor] ?? HAIR_COLORS[1], track }, { face: false, beard: false });
   // Aufsätze sind für einen Kopf mit Radius 0.15 gebaut: auf diesen Kopf anpassen
   headGroup.scale.set(0.64, 0.72, 0.74);
   headGroup.position.set(0, 1.69, -0.006);

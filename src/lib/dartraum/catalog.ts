@@ -69,15 +69,17 @@ export const SHOES = [
   { id: "runner", name: "Runner Neon", upper: "#5fe3f0", sole: "#f2f2f5", accent: "#d63ce0" },
 ] as const;
 
+// Frisuren und Bart sind fertige 3D-Modelle (Quaternius, CC0), siehe public/models/dartraum/hair.glb
 export const HAIR_STYLES = [
-  { id: "short", name: "Kurz" }, { id: "fade", name: "Fade" }, { id: "quiff", name: "Tolle" }, { id: "side", name: "Seitenscheitel" },
-  { id: "buzz", name: "Buzzcut" }, { id: "bald", name: "Glatze" }, { id: "curly", name: "Locken" }, { id: "long", name: "Lang" },
-  { id: "ponytail", name: "Zopf" }, { id: "bun", name: "Dutt" }, { id: "mohawk", name: "Iro" }, { id: "slick", name: "Zurückgegelt" },
+  { id: "short", name: "Kurz" }, { id: "buzz", name: "Buzzcut" },
+  { id: "long", name: "Lang" }, { id: "bun", name: "Dutt" }, { id: "bald", name: "Glatze" },
 ] as const;
 export const BEARDS = [
-  { id: "none", name: "Ohne" }, { id: "stubble", name: "Dreitage" }, { id: "mustache", name: "Schnauzer" },
-  { id: "goatee", name: "Spitzbart" }, { id: "full", name: "Vollbart" }, { id: "chin", name: "Kinnbart" },
+  { id: "none", name: "Ohne" }, { id: "stubble", name: "Dreitage" }, { id: "full", name: "Vollbart" },
 ] as const;
+/** Frühere Frisuren/Bärte auf die neuen fertigen Modelle umstellen */
+const OLD_HAIR: Record<string, string> = { fade: "buzz", quiff: "short", slick: "short", curly: "short", mohawk: "buzz", ponytail: "bun", side: "short" };
+const OLD_BEARD: Record<string, string> = { mustache: "stubble", goatee: "stubble", chin: "stubble" };
 export const GLASSES = [
   { id: "none", name: "Ohne" }, { id: "round", name: "Rund" }, { id: "square", name: "Eckig" }, { id: "sun", name: "Sonnenbrille" }, { id: "neon", name: "Neon-Shades" },
 ] as const;
@@ -168,8 +170,8 @@ export function normalizeLook(l: Partial<Look> | undefined | null): Look {
     ...DEFAULT_LOOK,
     skin: typeof src.skin === "number" ? Math.min(src.skin, SKIN_TONES.length - 1) : DEFAULT_LOOK.skin,
     hairColor: typeof src.hairColor === "number" ? Math.min(src.hairColor, HAIR_COLORS.length - 1) : DEFAULT_LOOK.hairColor,
-    hair: pick(src.hair, HAIR_STYLES, DEFAULT_LOOK.hair),
-    beard: pick(src.beard, BEARDS, DEFAULT_LOOK.beard),
+    hair: pick(OLD_HAIR[src.hair as string] ?? src.hair, HAIR_STYLES, DEFAULT_LOOK.hair),
+    beard: pick(OLD_BEARD[src.beard as string] ?? src.beard, BEARDS, DEFAULT_LOOK.beard),
     glasses: pick(src.glasses, GLASSES, DEFAULT_LOOK.glasses),
     hat: pick(src.hat, HATS, DEFAULT_LOOK.hat),
     hatColor: typeof src.hatColor === "string" ? src.hatColor : DEFAULT_LOOK.hatColor,

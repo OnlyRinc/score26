@@ -3,3 +3,4 @@ Spielerfigur und Animationen im Dartraum:
 - Universal Animation Library von Quaternius, https://quaternius.com
 Lizenz: CC0 1.0 Universal (Public Domain), https://creativecommons.org/publicdomain/zero/1.0/
 Für Score26 verkleinert und komprimiert.
+- Frisuren und Bart (hair.glb): Universal Base Characters, Hairstyles, von Quaternius, CC0

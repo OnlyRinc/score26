@@ -299,8 +299,8 @@ function Wardrobe({ pid, look, defaultName }: { pid: string; look: Look; default
           <div key="head" className="fade-in">
             <Section title="Hautfarbe"><Swatches label="Hautfarbe" colors={named(SKIN_TONES, "Ton")} value={SKIN_TONES[look.skin]} onPick={(hex) => set({ skin: SKIN_TONES.indexOf(hex) })} /></Section>
             <Section title="Haarfarbe"><Swatches label="Haarfarbe" colors={named(HAIR_COLORS, "Farbe")} value={HAIR_COLORS[look.hairColor]} onPick={(hex) => set({ hairColor: HAIR_COLORS.indexOf(hex) })} /></Section>
-            <Section title="Frisur" hint="kostenlos"><Chips items={HAIR_STYLES} value={look.hair} onPick={(hair) => set({ hair })} render={(id) => <HeadCard look={{ ...look, hair: id, hat: "none" }} uid={`h${id}`} />} /></Section>
-            <Section title="Bart" hint="kostenlos"><Chips items={BEARDS} value={look.beard} onPick={(beard) => set({ beard })} render={(id) => <HeadCard look={{ ...look, beard: id }} uid={`b${id}`} />} /></Section>
+            <Section title="Frisur" hint="kostenlos"><Chips items={HAIR_STYLES} value={look.hair} onPick={(hair) => set({ hair })} /></Section>
+            <Section title="Bart" hint="kostenlos"><Chips items={BEARDS} value={look.beard} onPick={(beard) => set({ beard })} /></Section>
             <Section title="Brille" hint="kostenlos"><Chips items={GLASSES} value={look.glasses} onPick={(glasses) => set({ glasses })} render={(id) => <HeadCard look={{ ...look, glasses: id }} uid={`g${id}`} />} /></Section>
             <Section title="Kopfbedeckung"><Chips items={HATS} value={look.hat} onPick={(hat) => set({ hat })} render={(id) => <HeadCard look={{ ...look, hat: id }} uid={`k${id}`} />} /></Section>
             {look.hat !== "none" && look.hat !== "crown" && (
