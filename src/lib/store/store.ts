@@ -6,7 +6,7 @@ import type { MatchSetup, Visit } from "@/lib/game";
 import { DEFAULT_TIEBREAKERS } from "@/lib/tournament";
 import type { FixtureResult, Player, Settings, StoredMatch, Tournament, TrainingSession } from "./types";
 import type { TrainingEvent, TrainingSettings } from "@/lib/training/training";
-import { DEFAULT_LOOK, type Look } from "@/lib/dartraum/catalog";
+import { DEFAULT_LOOK, normalizeLook, type Look } from "@/lib/dartraum/catalog";
 
 /** Dartraum-Profil eines Spielers. Verdiente Coins werden aus den Spielen berechnet, hier steht nur, was ausgegeben wurde. */
 export interface DartraumProfile {
@@ -29,6 +29,8 @@ export interface AppState {
   /** Kauf mit Preis; prüft den Kontostand nicht, das macht die Oberfläche */
   buyItem(playerId: string, itemId: string, price: number): void;
   buyRoom(playerId: string, level: number, price: number): void;
+  /** Testmodus: Raumstufe frei wählen */
+  setRoom(playerId: string, level: number): void;
 
   createTraining(settings: TrainingSettings, playerId: string | undefined, playerName: string): string;
   addTrainingEvent(id: string, e: TrainingEvent): void;
@@ -204,7 +206,7 @@ export const useStore = create<AppState>()(
       setLook(pid, patch) {
         set((s) => {
           const pr = s.dartraum[pid] ?? emptyProfile();
-          return { dartraum: { ...s.dartraum, [pid]: { ...pr, look: { ...pr.look, ...patch } } } };
+          return { dartraum: { ...s.dartraum, [pid]: { ...pr, look: { ...normalizeLook(pr.look), ...patch } } } };
         });
       },
       buyItem(pid, itemId, price) {
@@ -219,6 +221,13 @@ export const useStore = create<AppState>()(
           const pr = s.dartraum[pid] ?? emptyProfile();
           if (pr.room >= level) return s;
           return { dartraum: { ...s.dartraum, [pid]: { ...pr, room: level, spent: pr.spent + price } } };
+        });
+      },
+
+      setRoom(pid, level) {
+        set((s) => {
+          const pr = s.dartraum[pid] ?? emptyProfile();
+          return { dartraum: { ...s.dartraum, [pid]: { ...pr, room: level } } };
         });
       },
 
