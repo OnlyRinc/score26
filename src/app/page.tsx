@@ -8,6 +8,7 @@ export default function Home() {
   const hydrated = useHydrated();
   const matches = useStore((s) => s.matches);
   const tournaments = useStore((s) => s.tournaments);
+  const deleteMatch = useStore((s) => s.deleteMatch);
   if (!hydrated) return <Loading />;
 
   const running = Object.values(matches)
@@ -59,12 +60,18 @@ export default function Home() {
             {running.map((m) => {
               const st = computeMatch(m.setup, m.visits);
               return (
-                <Link key={m.id} href={`/match/?id=${m.id}`} className="rounded-2xl border border-line bg-surface p-4">
-                  <div className="font-display text-xl uppercase">{m.setup.players.map((p) => p.nickname).join(" vs ")}</div>
-                  <div className="text-sm text-muted tabular">
-                    {st.isSetPlay ? `Sets ${st.players.map((p) => p.sets).join(":")} · ` : ""}Legs {st.players.map((p) => p.legs).join(":")}
-                  </div>
-                </Link>
+                <div key={m.id} className="flex items-center gap-2 rounded-2xl border border-line bg-surface p-2 pl-4">
+                  <Link href={`/match/?id=${m.id}`} className="min-w-0 flex-1 py-2">
+                    <div className="truncate font-display text-xl uppercase">{m.setup.players.map((p) => p.nickname).join(" vs ")}</div>
+                    <div className="text-sm text-muted tabular">
+                      {st.isSetPlay ? `Sets ${st.players.map((p) => p.sets).join(":")} · ` : ""}Legs {st.players.map((p) => p.legs).join(":")}
+                    </div>
+                  </Link>
+                  {!m.tournamentId && (
+                    <button aria-label="Match verwerfen" onClick={() => { if (confirm("Dieses Match verwerfen?")) deleteMatch(m.id); }}
+                      className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-lg text-muted active:bg-live/30">🗑</button>
+                  )}
+                </div>
               );
             })}
           </div>

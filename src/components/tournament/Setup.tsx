@@ -32,7 +32,7 @@ export function Section({ n, title, children, right }: { n?: number; title: stri
   );
 }
 
-export function TournamentSetup({ t }: { t: Tournament }) {
+export function TournamentSetup({ t, onDelete }: { t: Tournament; onDelete?: () => void }) {
   const players = useStore((s) => s.players);
   const update = useStore((s) => s.updateTournament);
   const [newPlayer, setNewPlayer] = useState(false);
@@ -185,6 +185,12 @@ export function TournamentSetup({ t }: { t: Tournament }) {
       </Section>
 
       {n >= 2 && <HandicapEditor t={t} />}
+
+      {onDelete && (
+        <div className="flex justify-end">
+          <Button variant="danger" onClick={onDelete}>🗑 Turnier löschen</Button>
+        </div>
+      )}
 
       <div className="sticky bottom-0 -mx-4 border-t border-line bg-bg/90 px-4 py-4 backdrop-blur sm:-mx-6 sm:px-6">
         <Button variant="primary" size="lg" className="w-full" disabled={!advOk} onClick={start}>

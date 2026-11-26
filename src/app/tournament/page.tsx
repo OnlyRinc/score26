@@ -37,7 +37,7 @@ function TournamentScreen() {
     return (
       <Page>
         <PageHeader title={t.name} back="/tournaments/" right={logo} />
-        <TournamentSetup t={t} />
+        <TournamentSetup t={t} onDelete={() => { if (confirm(`Turnier „${t.name}“ endgültig löschen?`)) { deleteTournament(t.id); router.replace("/tournaments/"); } }} />
       </Page>
     );
   }

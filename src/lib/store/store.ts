@@ -124,7 +124,9 @@ export const useStore = create<AppState>()(
         set((s) => {
           const tournaments = { ...s.tournaments };
           delete tournaments[id];
-          return { tournaments };
+          // zugehörige Matches mit löschen
+          const matches = Object.fromEntries(Object.entries(s.matches).filter(([, m]) => m.tournamentId !== id));
+          return { tournaments, matches };
         });
       },
       setFixtureResult(tid, stage, key, result) {
