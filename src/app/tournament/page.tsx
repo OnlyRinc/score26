@@ -7,6 +7,7 @@ import { Button, Card, Loading, Page, PageHeader, Segmented } from "@/components
 import { HandicapEditor, Section, TiebreakerEditor, TournamentSetup } from "@/components/tournament/Setup";
 import { Bracket, Ceremony, GroupTables, Schedule, TournamentStats } from "@/components/tournament/Views";
 import { LiveShare } from "@/components/tournament/LiveShare";
+import { useLivePublisher } from "@/lib/live/publisher";
 
 export default function TournamentPage() {
   return <Suspense fallback={<Loading />}><TournamentScreen /></Suspense>;
@@ -25,6 +26,7 @@ function TournamentScreen() {
   const update = useStore((s) => s.updateTournament);
   const deleteTournament = useStore((s) => s.deleteTournament);
   const [tab, setTab] = useState<Tab>((params.get("tab") as Tab) || "plan");
+  useLivePublisher(id);
 
   if (!hydrated) return <Loading />;
   if (!t) return <Page><PageHeader title="Turnier" back="/tournaments/" /><p>Turnier nicht gefunden.</p></Page>;
