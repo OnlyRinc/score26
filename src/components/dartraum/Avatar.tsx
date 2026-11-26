@@ -115,7 +115,7 @@ function DartPin({ id, uid }: { id: string; uid: string }) {
   );
 }
 
-function Hair({ id, color }: { id: string; color: string }) {
+export function Hair({ id, color }: { id: string; color: string }) {
   switch (id) {
     case "hair-bald": return <ellipse cx="88" cy="62" rx="12" ry="5" fill="#fff" opacity=".18" />;
     case "hair-buzz": return <path d="M62 86 C60 56 78 48 100 48 C122 48 140 56 138 86 C130 66 116 62 100 62 C84 62 70 66 62 86 Z" fill={color} opacity=".75" />;
@@ -128,7 +128,7 @@ function Hair({ id, color }: { id: string; color: string }) {
   }
 }
 
-function Beard({ id, color }: { id: string; color: string }) {
+export function Beard({ id, color }: { id: string; color: string }) {
   switch (id) {
     case "beard-stubble": return <path d="M64 108 C66 136 84 142 100 142 C116 142 134 136 136 108 C130 128 118 132 100 132 C82 132 70 128 64 108 Z" fill={color} opacity=".35" />;
     case "beard-mustache": return <path d="M84 117 C90 111 98 112 100 115 C102 112 110 111 116 117 C110 118 104 119 100 118 C96 119 90 118 84 117 Z" fill={color} />;
@@ -138,7 +138,7 @@ function Beard({ id, color }: { id: string; color: string }) {
   }
 }
 
-function Glasses({ id, uid }: { id: string; uid: string }) {
+export function Glasses({ id, uid }: { id: string; uid: string }) {
   if (id === "glasses-classic") return (
     <g fill="none" stroke="#1b1420" strokeWidth="2.6"><circle cx="85" cy="100" r="10" /><circle cx="115" cy="100" r="10" /><path d="M95 99 Q100 96 105 99 M75 98 L62 95 M125 98 L138 95" /></g>
   );
@@ -154,7 +154,7 @@ function Glasses({ id, uid }: { id: string; uid: string }) {
   return null;
 }
 
-function Hat({ id, uid }: { id: string; uid: string }) {
+export function Hat({ id, uid }: { id: string; uid: string }) {
   switch (id) {
     case "hat-cap": return <g><path d="M60 82 C60 50 80 40 100 40 C120 40 140 50 140 82 Z" fill={PINK} /><path d="M56 82 C80 74 150 74 168 86 C150 92 90 90 56 86 Z" fill="#8e1f99" /><circle cx="100" cy="42" r="3" fill="#8e1f99" /></g>;
     case "hat-cap-back": return <g><path d="M60 82 C60 50 80 40 100 40 C120 40 140 50 140 82 Z" fill={CYAN} /><path d="M70 82 C76 78 124 78 130 82 L128 86 L72 86 Z" fill="#1d8a96" /><rect x="90" y="74" width="20" height="6" rx="3" fill="#0b2a2f" /></g>;

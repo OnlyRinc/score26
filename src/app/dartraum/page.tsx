@@ -8,7 +8,7 @@ import { ACHIEVEMENTS, computeEarnings, unlockedAchievements } from "@/lib/dartr
 import {
   HAIR_COLORS, ITEMS, ROOM_LEVELS, SKIN_TONES, SLOT_LABEL, freeItems, type Item, type Look, type Slot,
 } from "@/lib/dartraum/catalog";
-import { Avatar } from "@/components/dartraum/Avatar";
+import { FigureCard } from "@/components/dartraum/Figure";
 import { Room } from "@/components/dartraum/Room";
 import { Button, Card, Empty, Loading, Page, PageHeader, Segmented, cx, inputCls } from "@/components/ui";
 import { soundTon } from "@/lib/sound/effects";
@@ -56,7 +56,7 @@ function PlayerPick() {
         <div className="stagger grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {list.map((p) => (
             <Link key={p.id} href={`/dartraum/?p=${p.id}`} className="tile rounded-3xl border border-line bg-gradient-to-b from-pink-dark/25 to-surface p-3 text-center">
-              <Avatar look={(dartraum[p.id] ?? emptyProfile()).look} size={200} className="mx-auto h-auto w-full" />
+              <FigureCard look={(dartraum[p.id] ?? emptyProfile()).look} size={160} className="mx-auto h-auto w-2/3" />
               <div className="mt-2 truncate font-display text-2xl uppercase">{displayName(p)}</div>
               <PlayerCoins pid={p.id} />
             </Link>
@@ -192,7 +192,10 @@ function Wardrobe({ pid, balance, unlocked }: { pid: string; balance: number; un
   return (
     <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
       <Card className="text-center lg:sticky lg:top-24 lg:self-start">
-        <Avatar key={JSON.stringify(shown)} look={shown} size={260} className="animate-pop mx-auto h-auto w-full max-w-[280px]" />
+        <div className="flex justify-center gap-2">
+          <FigureCard key={JSON.stringify(shown)} look={shown} size={150} className="animate-pop h-auto w-1/2 max-w-[150px]" />
+          <FigureCard look={shown} size={150} view="back" className="h-auto w-1/2 max-w-[150px] opacity-80" />
+        </div>
         {preview ? (
           <div className="mt-3 space-y-2">
             <div className="font-display text-2xl uppercase">{preview.name}</div>
@@ -233,7 +236,7 @@ function Wardrobe({ pid, balance, unlocked }: { pid: string; balance: number; un
               <button key={it.id} onClick={() => pick(it)}
                 className={cx("tile relative rounded-2xl border p-2 text-left", worn ? "border-pink bg-pink/15" : preview?.id === it.id ? "border-cyan bg-cyan/10" : "border-line bg-surface/80")}>
                 {it.tag && <span className={cx("absolute left-2 top-2 z-10 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase", it.tag === "Club26" ? "bg-pink text-white" : "bg-[#e8c25a] text-[#3a2a00]")}>{it.tag}</span>}
-                <Avatar look={lookWith(it)} size={160} className={cx("h-auto w-full", locked && "opacity-40 grayscale")} />
+                <FigureCard look={lookWith(it)} size={120} className={cx("mx-auto h-auto w-3/4", locked && "opacity-40 grayscale")} />
                 <div className="mt-1 truncate font-display text-lg uppercase">{it.name}</div>
                 <div className="text-sm">
                   {worn ? <span className="text-pink">Angezogen</span> : own ? <span className="text-cyan">Im Schrank</span> : locked ? <span className="text-muted">🔒 {ach(it.achievement)?.name}</span> : <span className="text-[#f3d77f]">{it.price} C</span>}
