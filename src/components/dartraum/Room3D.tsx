@@ -27,7 +27,8 @@ function plan(level: number, rand: () => number): Task[] {
     () => { go(2.6 + rand() * 2.6, 3.2 + rand() * 1.0); t.push({ kind: "wave", dur: 1.6, face: FACE.south }, { kind: "stand", dur: 1 + rand() * 1.5, face: FACE.south }); },
   ];
   if (level >= 2) {
-    extra.push(() => { go(2.3, 5.6); t.push({ kind: "walk", to: [0.72, 5.6] }, { kind: "sit", dur: 4.5 + rand() * 3, face: FACE.east }, { kind: "walk", to: [2.3, 5.6] }); });
+    // Weg zwischen Couch und Couchtisch hindurch, nicht durch den Tisch
+    extra.push(() => { go(1.5, 3.9); t.push({ kind: "walk", to: [1.5, 5.6] }, { kind: "walk", to: [0.8, 5.6] }, { kind: "sit", dur: 4.5 + rand() * 3, face: FACE.east }, { kind: "walk", to: [1.5, 5.6] }, { kind: "walk", to: [1.5, 3.9] }); });
     extra.push(() => { go(5.85, 6.0); t.push({ kind: "drink", dur: 3.6, face: FACE.east }); });
   }
   if (level >= 3) extra.push(() => { go(5.6, 2.6); t.push({ kind: "walk", to: [6.9, 2.6] }, { kind: "walk", to: [6.9, 2.02] }, { kind: "desk", dur: 5 + rand() * 2, face: FACE.board }, { kind: "walk", to: [6.9, 2.6] }); });
@@ -137,7 +138,7 @@ export function Room3D({ level, look, name, trophies, medals }: { level: number;
           const n = Math.floor(sim.t / 1.2), within = (sim.t % 1.2) / 1.2;
           sim.phase = n < 3 ? within : 0.99;
           if (n < 3 && within >= 0.74 && !sim.flying && sim.thrown <= n) {
-            const a = rand() * Math.PI * 2, rad = Math.sqrt(rand()) * 0.15;
+            const a = rand() * Math.PI * 2, rad = Math.sqrt(rand()) * 0.24;
             sim.flying = { from: char.handWorld(new THREE.Vector3()), to: [Math.cos(a) * rad, Math.sin(a) * rad], t: 0 };
             sim.thrown = n + 1;
           }

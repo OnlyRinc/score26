@@ -228,7 +228,7 @@ export function buildCharacter(look: Look, name: string): Character {
       L.sh.rotation.x = -1.1; L.el.rotation.x = -0.4;
       head.rotation.x = -0.15;
     } else if (pose === "sit" || pose === "desk") {
-      body.position.y = -0.28;
+      body.position.y = -0.2;
       for (const l of legs) { l.hip.rotation.x = -Math.PI / 2; l.knee.rotation.x = Math.PI / 2; }
       legs[0].hip.rotation.z = -0.06; legs[1].hip.rotation.z = 0.06;
       if (pose === "desk") {

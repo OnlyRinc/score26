@@ -101,31 +101,32 @@ export function buildRoom(level: number, info: RoomInfo): BuiltRoom {
   // ---------------- Dartboard ----------------
   const bt = keep(boardTexture());
   const boardMats = [M("#1a1a1a", { roughness: 0.9 }), M("#fff", { map: bt, roughness: 0.85 }), M("#111")];
-  const board = new THREE.Mesh(new THREE.CylinderGeometry(0.225, 0.225, 0.04, 64), boardMats);
+  const board = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.04, 64), boardMats);
   board.rotation.x = Math.PI / 2; board.position.set(BOARD.x, BOARD.y, 0.04); board.castShadow = true; board.receiveShadow = true;
   // Textur so drehen, dass die 20 oben steht
   bt.center.set(0.5, 0.5); bt.rotation = Math.PI;
   add(board);
   if (level >= 1) {
     // Auffangring
-    const surround = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.03, 64), M("#060606", { roughness: 0.6 }));
+    const surround = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.03, 64), M("#060606", { roughness: 0.6 }));
     surround.rotation.x = Math.PI / 2; surround.position.set(BOARD.x, BOARD.y, 0.02); surround.receiveShadow = true; add(surround);
   }
   if (level === 1) {
     // Dartkabinett mit offenen Türen und Kreidetafeln
     const wood = M("#6b3f22", { roughness: 0.6 });
-    block(BOARD.x - 0.55, 0.0, 1.1, 0.015, 1.1, wood, BOARD.y - 0.55, 0.005);
-    for (const s of [-1, 1]) block(BOARD.x + s * 0.55 - (s > 0 ? 0.04 : 0), 0.0, 0.04, 0.12, 1.1, wood, BOARD.y - 0.55, 0.01);
-    block(BOARD.x - 0.55, 0.0, 1.1, 0.12, 0.04, wood, BOARD.y + 0.51, 0.01); block(BOARD.x - 0.55, 0.0, 1.1, 0.12, 0.04, wood, BOARD.y - 0.55, 0.01);
+    const C = 0.8;
+    block(BOARD.x - C, 0.0, 2 * C, 0.015, 2 * C, wood, BOARD.y - C, 0.005);
+    for (const s of [-1, 1]) block(BOARD.x + s * C - (s > 0 ? 0.05 : 0), 0.0, 0.05, 0.14, 2 * C, wood, BOARD.y - C, 0.01);
+    block(BOARD.x - C, 0.0, 2 * C, 0.14, 0.05, wood, BOARD.y + C - 0.05, 0.01); block(BOARD.x - C, 0.0, 2 * C, 0.14, 0.05, wood, BOARD.y - C, 0.01);
     const chalk = signTexture((ctx, w, h) => { ctx.fillStyle = "#1d3a2c"; ctx.fillRect(0, 0, w, h); ctx.strokeStyle = "rgba(255,255,255,.8)"; ctx.lineWidth = 4; ctx.font = `600 48px ${f.display}`; ctx.fillStyle = "rgba(255,255,255,.85)"; ctx.textAlign = "center"; ["501", "441", "321", "180"].forEach((n, i) => ctx.fillText(n, w / 2, 90 + i * 100)); }, 256, 512);
     const doorM = [wood, wood, wood, wood, M("#fff", { map: keep(chalk) }), wood];
     for (const s of [-1, 1]) {
-      const d = box(0.55, 1.1, 0.04, doorM, 0, 0, 0, 0.01);
-      const piv = new THREE.Group(); piv.position.set(BOARD.x + s * 0.55, BOARD.y, 0.12); piv.rotation.y = s * 1.9; d.position.set(-s * 0.275, 0, 0); group.remove(d); piv.add(d); add(piv);
+      const d = box(C, 2 * C, 0.04, doorM, 0, 0, 0, 0.01);
+      const piv = new THREE.Group(); piv.position.set(BOARD.x + s * C, BOARD.y, 0.14); piv.rotation.y = s * 1.9; d.position.set(-s * C / 2, 0, 0); group.remove(d); piv.add(d); add(piv);
     }
   }
   if (level >= 2) {
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.33, 0.025, 12, 64), glow("#dff6ff", 0.55));
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.52, 0.035, 12, 64), glow("#dff6ff", 0.55));
     ring.position.set(BOARD.x, BOARD.y, 0.12); add(ring);
     const bl = new THREE.PointLight("#e8f6ff", 0.5, 2, 2); bl.position.set(BOARD.x, BOARD.y, 0.6); add(bl);
   }
@@ -142,7 +143,6 @@ export function buildRoom(level: number, info: RoomInfo): BuiltRoom {
   // Abwurflinie und Matte
   if (level >= 1) {
     block(BOARD.x - 0.6, 0.04, 1.2, 3.3, 0.012, M(level >= 3 ? "#1a1a22" : "#2a2a30", { roughness: 0.95 }), 0, 0.005);
-    for (const z of [1.0, 1.5, 2.0]) block(BOARD.x - 0.58, z, 0.12, 0.02, 0.014, M("#ddd"), 0, 0.002);
   }
   block(BOARD.x - 0.45, OCHE_Z - 0.02, 0.9, 0.04, 0.035, level >= 3 ? glow(CYAN, 2) : M(level >= 1 ? "#f4f4f6" : "#e8e2d0"), 0, 0.01);
 
@@ -163,18 +163,18 @@ export function buildRoom(level: number, info: RoomInfo): BuiltRoom {
   // Trophäenregal an der hinteren Wand
   {
     const shelfM = M("#5a3a22", { roughness: 0.6 });
-    block(1.2, 0, 1.9, 0.26, 0.04, shelfM, 1.75, 0.01);
+    block(0.95, 0, 1.75, 0.26, 0.04, shelfM, 1.75, 0.01);
     const goldM = M(GOLD, { metalness: 0.9, roughness: 0.25 });
     const n = Math.min(5, info.trophies);
     for (let i = 0; i < n; i++) {
       const pts = [[0, 0], [0.06, 0], [0.06, 0.02], [0.02, 0.04], [0.015, 0.12], [0.07, 0.17], [0.08, 0.26], [0.0, 0.25]].map(([r, y]) => new THREE.Vector2(r, y));
-      const cup = new THREE.Mesh(new THREE.LatheGeometry(pts, 20), goldM); cup.position.set(1.45 + i * 0.36, 1.79, 0.13); cup.castShadow = true; add(cup);
+      const cup = new THREE.Mesh(new THREE.LatheGeometry(pts, 20), goldM); cup.position.set(1.15 + i * 0.33, 1.79, 0.13); cup.castShadow = true; add(cup);
     }
-    if (n === 0) onBack(signTexture((ctx, w, h) => { ctx.fillStyle = "rgba(255,255,255,.55)"; ctx.font = `italic 44px ${f.display}`; ctx.textAlign = "center"; ctx.fillText("Platz für Pokale", w / 2, h / 2 + 14); }, 512, 96), 1.6, 0.3, 2.15, 1.98, { transparent: true });
+    if (n === 0) onBack(signTexture((ctx, w, h) => { ctx.fillStyle = "rgba(255,255,255,.55)"; ctx.font = `italic 44px ${f.display}`; ctx.textAlign = "center"; ctx.fillText("Platz für Pokale", w / 2, h / 2 + 14); }, 512, 96), 1.5, 0.28, 1.82, 1.96, { transparent: true });
     // Medaillen am Band
     const m = Math.min(14, info.medals);
     for (let i = 0; i < m; i++) {
-      const x = 1.3 + (i % 7) * 0.26, y = 1.45 - Math.floor(i / 7) * 0.28;
+      const x = 1.05 + (i % 7) * 0.24, y = 1.45 - Math.floor(i / 7) * 0.28;
       block(x - 0.015, 0, 0.03, 0.01, 0.12, M(i % 2 ? PINK : CYAN), y + 0.03, 0.004);
       const med = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.012, 20), goldM); med.rotation.x = Math.PI / 2; med.position.set(x, y, 0.02); add(med);
     }
@@ -276,7 +276,7 @@ export function buildRoom(level: number, info: RoomInfo): BuiltRoom {
       ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.font = `700 150px ${f.display}`; ctx.fillText("180", w / 2, h / 2 + 20);
       ctx.font = `600 30px ${f.display}`; ctx.fillText("ONE HUNDRED", w / 2, h / 2 + 80); ctx.fillText("AND EIGHTY", w / 2, h / 2 + 115);
     }, 360, 480);
-    onBack(poster, 0.66, 0.88, 2.75, 2.45);
+    onBack(poster, 0.54, 0.72, 2.95, 2.55);
   }
   // Streaming-Setup ab Stufe 3
   if (level >= 3) {
