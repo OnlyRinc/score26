@@ -1,6 +1,8 @@
 // Der Dartraum als 3D-Diorama. 1 Einheit = 1 Meter. Boden 8 x 8, Board an der hinteren Wand (z = 0) bei x = 4.
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { CYAN, GOLD, PINK, boardTexture, brickTexture, concreteTexture, foamTexture, fonts, neonText, panelTexture, shade, signTexture, tileTexture, woodTexture } from "./textures";
 
 export const N = 8, WALL_H = 3.1;
@@ -16,7 +18,17 @@ export interface BuiltRoom {
   dispose: () => void;
 }
 
-export function buildRoom(level: number, info: RoomInfo): BuiltRoom {
+/** Fertige Möbel: KayKit Furniture Bits (Kay Lousberg, CC0). Eine Datei, jedes Möbel ist ein benannter Knoten. */
+let kitPromise: Promise<THREE.Object3D> | null = null;
+export function loadFurniture(): Promise<THREE.Object3D> {
+  if (kitPromise) return kitPromise;
+  const l = new GLTFLoader(); l.setMeshoptDecoder(MeshoptDecoder);
+  kitPromise = l.loadAsync("/models/dartraum/furniture.glb").then((g) => g.scene);
+  kitPromise.catch(() => { kitPromise = null; });
+  return kitPromise;
+}
+
+export function buildRoom(level: number, info: RoomInfo, kit?: THREE.Object3D): BuiltRoom {
   const group = new THREE.Group();
   const anims: ((t: number) => void)[] = [];
   const toDispose: { dispose: () => void }[] = [];
@@ -43,6 +55,16 @@ export function buildRoom(level: number, info: RoomInfo): BuiltRoom {
   const onLeft = (t: THREE.Texture, w: number, h: number, z: number, y: number, o: Partial<THREE.MeshStandardMaterialParameters> = {}) => {
     keep(t);
     const p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), M("#fff", { map: t, roughness: 0.8, ...o })); p.position.set(0.012, y, z); p.rotation.y = Math.PI / 2; p.receiveShadow = true; return add(p);
+  };
+  /** Fertiges Möbel aufstellen. Die Modelle schauen nach +z; rot dreht um die Hochachse. */
+  const put = (name: string, x: number, z: number, rot = 0, scale: number | [number, number, number] = 0.75, y = 0) => {
+    const src = kit?.getObjectByName(name);
+    if (!src) return null;
+    const o = src.clone(true);
+    o.position.set(x, y, z); o.rotation.y = rot;
+    if (Array.isArray(scale)) o.scale.set(...scale); else o.scale.setScalar(scale);
+    o.traverse((m) => { const mm = m as THREE.Mesh; if (mm.isMesh) { mm.castShadow = true; mm.receiveShadow = true; } });
+    return add(o);
   };
   const glow = (color: string, intensity = 2) => M(color, { emissive: color, emissiveIntensity: intensity, roughness: 0.3 });
 
@@ -148,18 +170,7 @@ export function buildRoom(level: number, info: RoomInfo): BuiltRoom {
 
   // ---------------- Möbel und Deko ----------------
   // Pflanze in der hinteren Ecke
-  {
-    const potM = M(level >= 2 ? "#26262e" : "#a0623a", { roughness: 0.6 });
-    cyl(0.2, 0.16, 0.42, potM, 0.4, 0.21, 0.4);
-    const leafM = M("#2f7d47", { roughness: 0.6, side: THREE.DoubleSide });
-    for (let i = 0; i < 11; i++) {
-      const a = (i / 11) * Math.PI * 2, tilt = 0.35 + (i % 3) * 0.2;
-      const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), leafM);
-      leaf.scale.set(0.45, 1.2, 0.12);
-      const piv = new THREE.Group(); piv.position.set(0.4, 0.45, 0.4); piv.rotation.set(Math.cos(a) * tilt, a, Math.sin(a) * tilt);
-      leaf.position.y = 0.2 + (i % 2) * 0.05; leaf.castShadow = true; piv.add(leaf); add(piv);
-    }
-  }
+  put("cactus_medium_A", 0.45, 0.45, 0.4, 0.8);
   // Trophäenregal an der hinteren Wand
   {
     const shelfM = M("#5a3a22", { roughness: 0.6 });
@@ -209,41 +220,22 @@ export function buildRoom(level: number, info: RoomInfo): BuiltRoom {
     // alter Hocker
     cyl(0.18, 0.18, 0.04, M("#7a5a3a"), 2.2, 0.6, 5.0); for (const a of [0, 2.1, 4.2]) cyl(0.015, 0.02, 0.6, M("#555"), 2.2 + Math.cos(a) * 0.12, 0.3, 5.0 + Math.sin(a) * 0.12, 6);
   }
-  // Stehlampe (Stufe 1)
+  // Stehlampe und Sessel (Stufe 1)
   if (level === 1) {
-    cyl(0.16, 0.18, 0.03, M("#222"), 0.5, 0.015, 3.3); cyl(0.015, 0.015, 1.6, M("#222", { metalness: 0.6 }), 0.5, 0.8, 3.3, 8);
-    cyl(0.12, 0.22, 0.28, M("#f2e3c0", { emissive: "#ffcf80", emissiveIntensity: 0.6, side: THREE.DoubleSide }), 0.5, 1.68, 3.3);
-    const l = new THREE.PointLight("#ffcf8a", 3, 5, 1.6); l.position.set(0.5, 1.55, 3.3); add(l);
-    // Teppich und Sessel
-    block(1.1, 4.4, 2.6, 2.2, 0.015, M("#6d2e3a", { roughness: 1 }), 0, 0.005);
-    const leather = M("#5b3a28", { roughness: 0.45 });
-    block(0.35, 5.0, 0.9, 0.9, 0.42, leather, 0, 0.08); block(0.25, 5.0, 0.22, 0.9, 0.95, leather, 0, 0.08);
-    block(0.35, 4.85, 0.9, 0.18, 0.62, leather, 0, 0.06); block(0.35, 5.87, 0.9, 0.18, 0.62, leather, 0, 0.06);
+    put("lamp_standing", 0.45, 3.4, 0, 0.7);
+    const l = new THREE.PointLight("#ffcf8a", 3, 5, 1.6); l.position.set(0.45, 1.55, 3.4); add(l);
+    put("rug_oval_A", 1.9, 5.45, Math.PI / 2, 0.85);
+    put("armchair_pillows", 0.62, 5.45, Math.PI / 2, 0.75);
   }
-  // Couch, Couchtisch und Teppich ab Stufe 2
+  // Couch, Couchtisch, Teppich und Stehlampe ab Stufe 2
   if (level >= 2) {
-    const col = level >= 4 ? "#2b2b36" : level === 3 ? "#3b3557" : "#7b8b7e";
-    const cm = M(col, { roughness: 0.9 }), cd = M(shade(col, -0.2), { roughness: 0.9 });
-    block(0.05, 4.4, 1.25, 2.4, 0.26, cd, 0.06, 0.06);           // Sockel
-    for (const z of [4.4, 6.5]) block(0.05, z, 1.25, 0.3, 0.68, cm, 0.06, 0.08); // Lehnen
-    block(0.05, 4.65, 0.32, 1.9, 0.95, cm, 0.06, 0.08);         // Rücken
-    for (const z of [4.72, 5.65]) block(0.36, z, 0.86, 0.9, 0.16, cm, 0.32, 0.07); // Sitzkissen
-    for (const z of [4.72, 5.65]) { const b = block(0.33, z, 0.22, 0.86, 0.48, cm, 0.46, 0.09); b.rotation.z = -0.12; }
-    for (const [x, z] of [[0.15, 4.5], [1.2, 4.5], [0.15, 6.7], [1.2, 6.7]]) cyl(0.025, 0.02, 0.06, M("#111"), x, 0.03, z, 8);
-    const pil = block(0.45, 4.8, 0.14, 0.4, 0.4, M(PINK, { roughness: 0.8 }), 0.5, 0.12); pil.rotation.z = -0.2;
-    // Kissen-Logo
-    const pl = signTexture((ctx, w, h) => { ctx.fillStyle = PINK; ctx.fillRect(0, 0, w, h); ctx.fillStyle = "#fff"; ctx.font = `120px ${f.script}`; ctx.textAlign = "center"; ctx.fillText("26", w / 2, h / 2 + 40); }, 256, 256);
-    const plp = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.34), M("#fff", { map: keep(pl) })); plp.position.set(0.53, 0.7, 5.0); plp.rotation.set(0, Math.PI / 2, -0.2); add(plp);
-    // Teppich
-    block(1.45, 4.3, 2.6, 2.6, 0.012, M(level >= 3 ? "#1b1730" : "#2f2340", { roughness: 1 }), 0, 0.004);
-    const rugLine = M(level >= 3 ? CYAN : PINK, { emissive: level >= 3 ? CYAN : PINK, emissiveIntensity: 0.3 });
-    block(1.55, 4.4, 2.4, 0.03, 0.016, rugLine, 0, 0.002); block(1.55, 6.77, 2.4, 0.03, 0.016, rugLine, 0, 0.002);
-    block(1.55, 4.4, 0.03, 2.4, 0.016, rugLine, 0, 0.002); block(3.92, 4.4, 0.03, 2.4, 0.016, rugLine, 0, 0.002);
-    // Couchtisch mit Getränk
-    block(1.75, 5.15, 0.75, 1.1, 0.05, M("#1d1d24", { roughness: 0.2, metalness: 0.3 }), 0.38, 0.02);
-    for (const [x, z] of [[1.8, 5.2], [2.45, 5.2], [1.8, 6.2], [2.45, 6.2]]) cyl(0.02, 0.02, 0.38, M("#333", { metalness: 0.7 }), x, 0.19, z, 8);
-    cyl(0.035, 0.03, 0.12, M("#f6c44a", { transparent: true, opacity: 0.85, roughness: 0.1 }), 2.1, 0.49, 5.5, 12);
-    block(1.9, 5.85, 0.3, 0.2, 0.02, M("#111"), 0.43, 0.005);
+    put(level >= 3 ? "rug_rectangle_stripes_B" : "rug_rectangle_stripes_A", 2.35, 5.6, Math.PI / 2, 0.95);
+    put("couch_pillows", 0.62, 5.6, Math.PI / 2, 0.75);
+    put("table_low", 2.25, 5.6, Math.PI / 2, 0.6);
+    put("lamp_standing", 0.4, 7.45, 0, 0.7);
+    put("cabinet_small_decorated", 0.42, 3.55, Math.PI / 2, 0.6);
+    // Getränk auf dem Couchtisch
+    cyl(0.035, 0.03, 0.12, M("#f6c44a", { transparent: true, opacity: 0.85, roughness: 0.1 }), 2.2, 0.36, 5.35, 12);
   }
   // Bar mit Hockern ab Stufe 2
   if (level >= 2) {
@@ -281,10 +273,8 @@ export function buildRoom(level: number, info: RoomInfo): BuiltRoom {
   // Streaming-Setup ab Stufe 3
   if (level >= 3) {
     // Schreibtisch an der hinteren Wand rechts
-    const top = M("#1c1c24", { roughness: 0.25, metalness: 0.2 });
-    block(5.95, 0.4, 1.9, 0.85, 0.05, top, 0.74, 0.02);
-    for (const x of [6.0, 7.75]) block(x, 0.45, 0.06, 0.75, 0.74, M("#111"), 0, 0.01);
-    block(5.98, 1.2, 1.84, 0.02, 0.025, glow(PINK, 3), 0.72, 0.005);
+    put("table_medium_long", 6.9, 0.83, 0, [0.63, 0.79, 0.42]);
+    block(5.98, 1.24, 1.84, 0.02, 0.025, glow(PINK, 3), 0.7, 0.005);
     // Monitore
     const scr = (draw: (ctx: CanvasRenderingContext2D, w: number, h: number) => void) => signTexture(draw, 512, 288);
     const live = scr((ctx, w, h) => { ctx.fillStyle = "#101828"; ctx.fillRect(0, 0, w, h); ctx.fillStyle = "#e5303f"; ctx.fillRect(20, 20, 120, 50); ctx.fillStyle = "#fff"; ctx.font = `700 40px ${f.display}`; ctx.fillText("LIVE", 38, 60); ctx.fillStyle = PINK; ctx.font = `700 120px ${f.display}`; ctx.textAlign = "center"; ctx.fillText("180", w / 2, 210); });
@@ -300,13 +290,8 @@ export function buildRoom(level: number, info: RoomInfo): BuiltRoom {
     block(6.55, 0.95, 0.5, 0.16, 0.02, M("#16161c"), 0.79, 0.005);
     block(6.57, 0.97, 0.46, 0.12, 0.004, glow("#8a7bff", 1.2), 0.81, 0.001);
     cyl(0.03, 0.03, 0.12, M("#222", { metalness: 0.5 }), 7.6, 0.95, 0.9, 12);
-    // Gaming-Stuhl
-    const chairM = M("#18161f", { roughness: 0.5 }), chairA = M(PINK, { roughness: 0.5 });
-    block(6.65, 1.75, 0.5, 0.5, 0.1, chairM, 0.42, 0.04);
-    block(6.65, 2.2, 0.5, 0.1, 0.8, chairM, 0.5, 0.04);
-    block(6.75, 2.21, 0.3, 0.1, 0.7, chairA, 0.55, 0.03);
-    cyl(0.04, 0.04, 0.32, M("#777", { metalness: 0.8 }), 6.9, 0.26, 2.0, 8);
-    for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2; const leg = block(6.9 - 0.02, 2.0 - 0.02, 0.04, 0.32, 0.04, M("#222"), 0.06, 0.01); leg.position.set(6.9 + Math.sin(a) * 0.15, 0.08, 2.0 + Math.cos(a) * 0.15); leg.rotation.y = a; }
+    // Stuhl
+    put("chair_A", 6.9, 2.0, Math.PI, 0.75);
     // Kamera auf Stativ und Ringlicht
     for (const a of [0, 2.1, 4.2]) { const l = cyl(0.012, 0.012, 1.35, M("#222"), 1.5 + Math.cos(a) * 0.18, 0.66, 2.4 + Math.sin(a) * 0.18, 6); l.rotation.set(Math.sin(a) * 0.15, 0, -Math.cos(a) * 0.15); }
     const cam = block(1.4, 2.32, 0.24, 0.16, 0.16, M("#111", { roughness: 0.3 }), 1.32, 0.03); cam.rotation.y = 0.8;

@@ -10,7 +10,7 @@ import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import type { Look } from "@/lib/dartraum/catalog";
 import { buildDart, type Pose3D } from "./three/character";
 import { buildPlayer, loadPlayerAssets, type Player } from "./three/player";
-import { BOARD, OCHE_Z, buildRoom, type BuiltRoom } from "./three/room";
+import { BOARD, OCHE_Z, buildRoom, loadFurniture, type BuiltRoom } from "./three/room";
 
 // ---------------- Ablauf ----------------
 type Task = { kind: "walk"; to: [number, number] } | { kind: Exclude<Pose3D, "walk">; dur: number; face: number };
@@ -32,7 +32,7 @@ function plan(level: number, rand: () => number): Task[] {
     extra.push(() => { go(1.5, 3.9); t.push({ kind: "walk", to: [1.5, 5.6] }, { kind: "walk", to: [1.14, 5.6] }, { kind: "sit", dur: 4.5 + rand() * 3, face: FACE.east }, { kind: "walk", to: [1.5, 5.6] }, { kind: "walk", to: [1.5, 3.9] }); });
     extra.push(() => { go(5.85, 6.0); t.push({ kind: "drink", dur: 3.6, face: FACE.east }); });
   }
-  if (level >= 3) extra.push(() => { go(5.6, 2.6); t.push({ kind: "walk", to: [6.3, 2.6] }, { kind: "walk", to: [6.3, 1.62] }, { kind: "walk", to: [6.9, 1.67] }, { kind: "desk", dur: 5 + rand() * 2, face: FACE.board }, { kind: "walk", to: [6.3, 1.62] }, { kind: "walk", to: [6.3, 2.6] }); });
+  if (level >= 3) extra.push(() => { go(5.6, 2.6); t.push({ kind: "walk", to: [6.3, 2.6] }, { kind: "walk", to: [6.3, 1.62] }, { kind: "walk", to: [6.9, 1.85] }, { kind: "desk", dur: 5 + rand() * 2, face: FACE.board }, { kind: "walk", to: [6.3, 1.62] }, { kind: "walk", to: [6.3, 2.6] }); });
   extra[Math.floor(rand() * extra.length)]();
   if (rand() < 0.45) extra[Math.floor(rand() * extra.length)]();
   return t;
@@ -153,7 +153,7 @@ export function Room3D({ level, look, name, trophies, medals }: { level: number;
       }
       // Figur setzen
       // Sitzhöhe: Couchkissen 0.48 m, Gaming-Stuhl 0.52 m
-      char.root.position.set(sim.x, room.floorAt(sim.x, sim.z) + (sim.pose === "sit" ? 0.09 : sim.pose === "desk" ? 0.08 : 0), sim.z);
+      char.root.position.set(sim.x, room.floorAt(sim.x, sim.z) + (sim.pose === "sit" ? 0.09 : sim.pose === "desk" ? 0.02 : 0), sim.z);
       char.root.rotation.y = sim.rot;
       const holding = (sim.pose === "throw" && (sim.phase < 0.74 || sim.thrown < 3)) || sim.pose === "stand" || sim.pose === "walk";
       char.update(sim.pose, sim.phase, time, holding && !(sim.pose === "throw" && sim.phase >= 0.74 && sim.phase < 1), dt);
@@ -228,11 +228,16 @@ export function Room3D({ level, look, name, trophies, medals }: { level: number;
 
   // Raum bei Stufenwechsel neu bauen
   useEffect(() => {
-    const st = stage.current; if (!st) return;
-    const room = buildRoom(level, { name, trophies, medals });
-    (room as unknown as { level: number }).level = level;
-    st.room?.group.removeFromParent(); st.room?.dispose();
-    st.scene.add(room.group); st.room = room;
+    let cancelled = false;
+    // Möbel laden; klappt das nicht, steht der Raum eben ohne die fertigen Möbel
+    loadFurniture().catch(() => undefined).then((kit) => {
+      const st = stage.current; if (!st || cancelled) return;
+      const room = buildRoom(level, { name, trophies, medals }, kit);
+      (room as unknown as { level: number }).level = level;
+      st.room?.group.removeFromParent(); st.room?.dispose();
+      st.scene.add(room.group); st.room = room;
+    });
+    return () => { cancelled = true; };
   }, [level, name, trophies, medals]);
 
   // Figur bei Look-Wechsel neu bauen (Schriften vorher laden, damit der Name sauber aufs Trikot kommt)
