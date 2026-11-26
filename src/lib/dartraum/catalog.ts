@@ -75,13 +75,13 @@ export const BUILDS = [
 // Frisuren und Bart sind fertige 3D-Modelle (Quaternius, CC0), siehe public/models/dartraum/hair.glb
 export const HAIR_STYLES = [
   { id: "short", name: "Kurz" }, { id: "buzz", name: "Buzzcut" },
-  { id: "long", name: "Lang" }, { id: "bald", name: "Glatze" },
+  { id: "bald", name: "Glatze" },
 ] as const;
 export const BEARDS = [
   { id: "none", name: "Ohne" }, { id: "full", name: "Vollbart" },
 ] as const;
 /** Frühere Frisuren/Bärte auf die neuen fertigen Modelle umstellen */
-const OLD_HAIR: Record<string, string> = { fade: "buzz", quiff: "short", slick: "short", curly: "short", mohawk: "buzz", ponytail: "long", bun: "long", side: "short" };
+const OLD_HAIR: Record<string, string> = { fade: "buzz", quiff: "short", slick: "short", curly: "short", mohawk: "buzz", ponytail: "short", bun: "short", long: "short", side: "short" };
 const OLD_BEARD: Record<string, string> = { stubble: "none", mustache: "full", goatee: "full", chin: "full" };
 export const GLASSES = [
   { id: "none", name: "Ohne" }, { id: "round", name: "Rund" }, { id: "square", name: "Eckig" }, { id: "sun", name: "Sonnenbrille" }, { id: "neon", name: "Neon-Shades" },

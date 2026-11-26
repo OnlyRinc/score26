@@ -195,7 +195,7 @@ export interface Player {
 
 /** Welche fertige Frisur zu welcher Auswahl gehört */
 // Lang hat oben keinen Ansatz: dafür den Buzzcut darunterlegen
-const HAIR_MODEL: Record<string, string[]> = { short: ["Hair_SimpleParted"], buzz: ["Hair_Buzzed"], long: ["Hair_Long", "Hair_SimpleParted"], bald: [] };
+const HAIR_MODEL: Record<string, string[]> = { short: ["Hair_SimpleParted"], buzz: ["Hair_Buzzed"], long: ["Hair_Long", "Hair_Buzzed"], bald: [] };
 
 const CLIP: Record<Pose3D, string> = {
   stand: "Idle_Loop", walk: "Walk_Loop", throw: "Idle_Loop", collect: "PickUp_Table", sit: "Sitting_Idle_Loop",
