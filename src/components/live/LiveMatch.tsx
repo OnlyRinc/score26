@@ -6,8 +6,20 @@ import { formatLabel } from "@/components/RulesEditor";
 
 export function LiveMatch({ m, label, big }: { m: StoredMatch; label?: string; big?: boolean }) {
   const st = computeMatch(m.setup, m.visits);
+  // Highlight der letzten Aufnahme (180 oder High Finish) für ein paar Sekunden
+  const allVisits = st.legs.flatMap((l) => l.visits);
+  const lastV = allVisits[allVisits.length - 1];
+  const recent = lastV && lastV.visit.at && Date.now() - lastV.visit.at < 15000;
+  const highlight = recent && !lastV.bust
+    ? lastV.scored === 180 ? `180! ${m.setup.players[lastV.player].nickname}`
+      : lastV.checkout && lastV.scored >= 100 ? `High Finish ${lastV.scored} · ${m.setup.players[lastV.player].nickname}`
+      : lastV.checkout ? `Game Shot · ${m.setup.players[lastV.player].nickname}` : null
+    : null;
   return (
-    <div className="rounded-3xl border border-live/50 bg-surface/90 p-3 sm:p-5">
+    <div className="relative rounded-3xl border border-live/50 bg-surface/90 p-3 sm:p-5">
+      {highlight && (
+        <div key={lastV.visit.at} className="animate-pop absolute inset-x-4 -top-5 z-10 rounded-2xl bg-pink py-2 text-center font-display text-2xl font-bold uppercase sm:text-3xl">{highlight}</div>
+      )}
       <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-widest">
         <span className="flex items-center gap-1.5 rounded-md bg-live px-2 py-0.5 text-white"><span className="h-2 w-2 animate-pulse rounded-full bg-white" />Live</span>
         <span className="truncate text-muted">{label ? `${label} · ` : ""}{formatLabel(m.setup.format)}{st.isSetPlay ? ` · Set ${st.set + 1}` : ""} · Leg {st.leg + 1}</span>

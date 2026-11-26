@@ -73,6 +73,8 @@ export interface Tournament {
 export interface Settings {
   inputMode: "total" | "darts";
   speech: boolean;
+  /** Soundeffekte (180, High Finish); undefined = an */
+  sounds?: boolean;
   handicapPointsPer10: number;
   askDoubles: boolean;
 }

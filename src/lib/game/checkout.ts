@@ -86,3 +86,17 @@ export function minDartsToFinish(remaining: number, out: OutRule): number | null
   for (let n = 1; n <= 3; n++) if (isCheckoutPossible(remaining, out, n)) return n;
   return null;
 }
+
+/**
+ * Wie viele Darts können in einer Aufnahme höchstens auf ein Doppel (Finish) geworfen worden sein?
+ * Ein Dart zählt "aufs Doppel", wenn der Rest vor dem Wurf mit einem Dart beendet werden kann.
+ * Beispiel: Rest 15 und "No Score" -> 0 (es war nie ein Doppel möglich, also keine Frage nötig).
+ */
+export function maxDartsAtDouble(remaining: number, total: number, out: OutRule): number {
+  if (out === "single") return 0;
+  const oneDart = (v: number) => isCheckoutPossible(v, out, 1);
+  if (oneDart(remaining)) return 3;
+  const low = Math.max(2, remaining - Math.max(0, total));
+  for (let v = remaining - 1; v >= low; v--) if (oneDart(v)) return 2;
+  return 0;
+}

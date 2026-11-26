@@ -4,10 +4,11 @@ import { cx } from "@/components/ui";
 import { OUT_LABEL } from "@/components/RulesEditor";
 
 export function PlayerPanel({
-  mp, index, state, stats, last, active, dartsLeft, size, baseStart, baseOut,
+  mp, index, state, stats, last, active, dartsLeft, size, baseStart, baseOut, flash,
 }: {
   mp: MatchPlayer; index: number; state: MatchState; stats: PlayerStats; last: VisitResult[]; active: boolean;
   dartsLeft: number; size: "xl" | "lg" | "md"; baseStart: number; baseOut: string;
+  flash?: { text: string; id: number; bust: boolean } | null;
 }) {
   const p = state.players[index];
   const checkout = active && p.opened ? suggestCheckout(p.remaining, mp.rules.outRule, dartsLeft) : null;
@@ -40,7 +41,14 @@ export function PlayerPanel({
         </div>
       </div>
 
-      <div className={cx("my-auto py-1 text-center font-display font-bold leading-none tabular", scoreSize)}>{p.remaining}</div>
+      <div className="relative my-auto">
+        <div key={p.remaining} className={cx("animate-score py-1 text-center font-display font-bold leading-none tabular", scoreSize)}>{p.remaining}</div>
+        {flash && (
+          <div key={flash.id} className={cx("float-up pointer-events-none absolute left-1/2 top-0 rounded-xl px-3 py-1 font-display text-3xl font-bold tabular", flash.bust ? "bg-live text-white" : "bg-white text-black")}>
+            {flash.text}
+          </div>
+        )}
+      </div>
 
       <div className="flex min-h-9 items-center justify-center">
         {checkout ? (

@@ -2,7 +2,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  computeMatch, dartValue, evaluateVisit, isCheckoutPossible, matchStats, minDartsToFinish, lastVisits,
+  computeMatch, dartValue, evaluateVisit, isCheckoutPossible, matchStats, maxDartsAtDouble, minDartsToFinish, lastVisits,
   type Dart, type Visit,
 } from "@/lib/game";
 import { useHydrated, useStore } from "@/lib/store/store";
@@ -15,6 +15,8 @@ import { DartPad } from "@/components/match/DartPad";
 import { StatsTable } from "@/components/match/StatsTable";
 import { formatLabel } from "@/components/RulesEditor";
 import { useLivePublisher } from "@/lib/live/publisher";
+import { Celebration, type CelebrationData } from "@/components/match/Celebration";
+import { sound180, soundHighFinish, soundLeg, soundMatch, soundTon } from "@/lib/sound/effects";
 
 export default function MatchPage() {
   return <Suspense fallback={<Loading />}><MatchScreen /></Suspense>;
@@ -41,29 +43,14 @@ function MatchScreen() {
   const [partial, setPartial] = useState<Dart[]>([]);
   const [pending, setPending] = useState<Pending | null>(null);
   const [statsOpen, setStatsOpen] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const [celebration, setCelebration] = useState<CelebrationData | null>(null);
+  const [flash, setFlash] = useState<{ player: number; text: string; id: number; bust: boolean } | null>(null);
+  const clearCelebration = useCallback(() => setCelebration(null), []);
 
   const state = useMemo(() => (match ? computeMatch(match.setup, match.visits) : null), [match]);
   const stats = useMemo(() => (state && match ? match.setup.players.map((_, i) => matchStats(state, i)) : []), [state, match]);
 
   useLivePublisher(match?.tournamentId, id);
-
-  // Leg-Gewinn anzeigen
-  const legCount = state?.legs.length ?? 0;
-  const prevLegs = useRef(legCount);
-  useEffect(() => {
-    if (!state || !match) return;
-    if (legCount > prevLegs.current && !state.finished) {
-      const leg = state.legs[legCount - 2];
-      if (leg?.winner !== null && leg?.winner !== undefined) {
-        setToast(`Leg für ${match.setup.players[leg.winner].nickname}`);
-        const t = setTimeout(() => setToast(null), 2200);
-        prevLegs.current = legCount;
-        return () => clearTimeout(t);
-      }
-    }
-    prevLegs.current = legCount;
-  }, [legCount, state, match]);
 
   const commit = useCallback((v: Visit) => {
     if (!match || !state) return;
@@ -73,12 +60,35 @@ function MatchScreen() {
     addVisit(match.id, v);
     setPartial([]);
     setPending(null);
+    const name = match.setup.players[cur].nickname;
+    const sounds = settings.sounds !== false;
+    const id = Date.now();
+    setFlash({ player: cur, text: res.bust ? "BUST" : `−${res.scored}`, id, bust: res.bust });
+    if (res.checkout) {
+      const after = computeMatch(match.setup, [...match.visits, v]);
+      if (after.finished) {
+        setCelebration({ kind: "match", title: name, sub: "Game shot and the match!", id });
+        if (sounds) soundMatch();
+      } else if (res.scored >= 100) {
+        setCelebration({ kind: "finish", title: String(res.scored), sub: `High Finish · ${name}`, id });
+        if (sounds) soundHighFinish();
+      } else {
+        setCelebration({ kind: "leg", title: "Game Shot", sub: `Leg für ${name} · ${res.scored}`, id });
+        if (sounds) soundLeg();
+      }
+    } else if (!res.bust && res.scored === 180) {
+      setCelebration({ kind: "180", title: "180", sub: name, id });
+      if (sounds) sound180();
+    } else if (!res.bust && res.scored >= 100) {
+      setCelebration({ kind: "ton", title: String(res.scored), id });
+      if (sounds) soundTon();
+    }
     if (settings.speech) {
       if (res.checkout) say(`Game shot! ${numberToWords(res.scored)}`);
       else if (res.bust) say("No score");
       else say(numberToWords(res.scored));
     }
-  }, [match, state, addVisit, settings.speech]);
+  }, [match, state, addVisit, settings.speech, settings.sounds]);
 
   const submitTotal = useCallback((total: number) => {
     if (!match || !state || state.finished) return;
@@ -99,9 +109,9 @@ function MatchScreen() {
       else setPending({ kind: "checkout", total, options });
       return;
     }
-    if (ask && p.opened && isCheckoutPossible(p.remaining, out, 3)) {
-      const minD = minDartsToFinish(p.remaining, out) ?? 3;
-      setPending({ kind: "doubles", total, max: 4 - minD });
+    const maxDoubles = ask && p.opened ? maxDartsAtDouble(p.remaining, total, out) : 0;
+    if (maxDoubles > 0) {
+      setPending({ kind: "doubles", total, max: maxDoubles });
       return;
     }
     commit({ total, dartsThrown: 3, dartsAtDouble: 0 });
@@ -177,8 +187,11 @@ function MatchScreen() {
         </div>
         <Segmented value={settings.inputMode} onChange={(inputMode) => { setPartial([]); updateSettings({ inputMode }); }}
           options={[{ value: "total", label: "Summe" }, { value: "darts", label: "Dart für Dart" }]} className="shrink-0 !flex-nowrap" />
-        <button onClick={() => updateSettings({ speech: !settings.speech })} className={cx("h-10 rounded-xl px-3 text-lg", settings.speech ? "bg-pink/30" : "bg-surface-2 opacity-60")} aria-label="Sprachausgabe">
-          {settings.speech ? "🔊" : "🔇"}
+        <button onClick={() => updateSettings({ sounds: settings.sounds === false })} className={cx("h-10 rounded-xl px-3 text-lg", settings.sounds !== false ? "bg-pink/30" : "bg-surface-2 opacity-60")} aria-label="Soundeffekte">
+          {settings.sounds !== false ? "🔊" : "🔇"}
+        </button>
+        <button onClick={() => updateSettings({ speech: !settings.speech })} className={cx("h-10 rounded-xl px-3 text-lg", settings.speech ? "bg-pink/30" : "bg-surface-2 opacity-60")} aria-label="Caller-Ansage">
+          🗣
         </button>
         <button onClick={() => setStatsOpen(true)} className="h-10 rounded-xl bg-surface-2 px-3 text-sm font-semibold">📊<span className="hidden sm:inline"> Statistik</span></button>
       </div>
@@ -189,6 +202,7 @@ function MatchScreen() {
             key={i} mp={mp} index={i} state={shownState} stats={stats[i]} last={lastVisits(state, i, 3)}
             active={i === cur && !state.finished} dartsLeft={3 - partial.length}
             size={n <= 2 ? "xl" : n === 3 ? "lg" : "md"} baseStart={base.startScore} baseOut={base.outRule}
+            flash={flash && flash.player === i ? flash : null}
           />
         ))}
       </div>
@@ -201,12 +215,6 @@ function MatchScreen() {
           <DartPad darts={partial} onDart={onDart} onUndo={undo} />
         )}
       </div>
-
-      {toast && (
-        <div className="pointer-events-none fixed inset-x-0 top-1/3 z-40 flex justify-center">
-          <div className="animate-pop rounded-3xl bg-pink px-10 py-6 font-display text-5xl font-bold uppercase shadow-2xl">{toast}</div>
-        </div>
-      )}
 
       <Modal open={!!pending} onClose={() => setPending(null)}
         title={pending?.kind === "checkout" ? `Check ${pending.total}! Wie viele Darts?` : "Darts aufs Doppel?"}>
@@ -266,6 +274,8 @@ function MatchScreen() {
           </div>
         )}
       </Modal>
+
+      <Celebration data={celebration} onDone={clearCelebration} />
     </div>
   );
 }

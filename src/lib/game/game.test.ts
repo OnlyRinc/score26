@@ -202,3 +202,27 @@ describe("Statistiken", () => {
     expect(a.shortLegs).toBe(1);
   });
 });
+
+import { maxDartsAtDouble } from "./checkout";
+describe("Darts aufs Doppel (wann wird gefragt?)", () => {
+  it("Rest 15 und No Score: kein Dart aufs Doppel möglich", () => {
+    expect(maxDartsAtDouble(15, 0, "double")).toBe(0);
+  });
+  it("Rest 32: bis zu 3 Darts aufs Doppel", () => {
+    expect(maxDartsAtDouble(32, 0, "double")).toBe(3);
+    expect(maxDartsAtDouble(32, 16, "double")).toBe(3);
+  });
+  it("Rest 100 mit 60 gestellt (Rest 40): höchstens 2", () => {
+    expect(maxDartsAtDouble(100, 60, "double")).toBe(2);
+  });
+  it("Rest 100 mit 20 (Rest 80): nie auf einem Doppel-Rest", () => {
+    expect(maxDartsAtDouble(100, 20, "double")).toBe(0);
+  });
+  it("Single Out: keine Abfrage", () => {
+    expect(maxDartsAtDouble(32, 0, "single")).toBe(0);
+  });
+  it("Rest 41 mit 1 gestellt (Rest 40): höchstens 2", () => {
+    expect(maxDartsAtDouble(41, 1, "double")).toBe(2);
+    expect(maxDartsAtDouble(41, 0, "double")).toBe(0);
+  });
+});
