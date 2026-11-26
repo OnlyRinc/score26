@@ -10,6 +10,8 @@ create table if not exists public.live_tournaments (
 
 alter table public.live_tournaments enable row level security;
 
+grant select on public.live_tournaments to anon, authenticated;
+
 drop policy if exists "Live lesen fuer alle" on public.live_tournaments;
 create policy "Live lesen fuer alle" on public.live_tournaments for select using (true);
 
