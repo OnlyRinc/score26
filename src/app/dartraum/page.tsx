@@ -6,7 +6,7 @@ import { emptyProfile, useHydrated, useStore } from "@/lib/store/store";
 import { displayName, koRounds } from "@/lib/store/tournamentHelpers";
 import { ACHIEVEMENTS, computeEarnings, unlockedAchievements } from "@/lib/dartraum/economy";
 import {
-  BARRELS, BARREL_FINISH, BEARDS, FLIGHT_DESIGNS, FLIGHT_SHAPES, GLASSES, GRIPS, HAIR_COLORS, HAIR_STYLES, HATS,
+  BARRELS, BARREL_FINISH, BEARDS, BUILDS, FLIGHT_DESIGNS, FLIGHT_SHAPES, GLASSES, GRIPS, HAIR_COLORS, HAIR_STYLES, HATS,
   JERSEY_COLORS, JERSEY_DESIGNS, PANTS, ROOM_LEVELS, SANDBOX, SHAFT_LENGTHS, SHOES, SKIN_TONES,
   normalizeLook, type DartSetup, type Jersey, type Look,
 } from "@/lib/dartraum/catalog";
@@ -297,6 +297,7 @@ function Wardrobe({ pid, look, defaultName }: { pid: string; look: Look; default
 
         {tab === "head" && (
           <div key="head" className="fade-in">
+            <Section title="Statur" hint="kostenlos"><Chips items={BUILDS} value={look.build} onPick={(build) => set({ build })} /></Section>
             <Section title="Hautfarbe"><Swatches label="Hautfarbe" colors={named(SKIN_TONES, "Ton")} value={SKIN_TONES[look.skin]} onPick={(hex) => set({ skin: SKIN_TONES.indexOf(hex) })} /></Section>
             <Section title="Haarfarbe"><Swatches label="Haarfarbe" colors={named(HAIR_COLORS, "Farbe")} value={HAIR_COLORS[look.hairColor]} onPick={(hex) => set({ hairColor: HAIR_COLORS.indexOf(hex) })} /></Section>
             <Section title="Frisur" hint="kostenlos"><Chips items={HAIR_STYLES} value={look.hair} onPick={(hair) => set({ hair })} /></Section>

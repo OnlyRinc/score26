@@ -29,10 +29,10 @@ function plan(level: number, rand: () => number): Task[] {
   ];
   if (level >= 2) {
     // Weg zwischen Couch und Couchtisch hindurch, nicht durch den Tisch
-    extra.push(() => { go(1.5, 3.9); t.push({ kind: "walk", to: [1.5, 5.6] }, { kind: "walk", to: [0.8, 5.6] }, { kind: "sit", dur: 4.5 + rand() * 3, face: FACE.east }, { kind: "walk", to: [1.5, 5.6] }, { kind: "walk", to: [1.5, 3.9] }); });
+    extra.push(() => { go(1.5, 3.9); t.push({ kind: "walk", to: [1.5, 5.6] }, { kind: "walk", to: [1.05, 5.6] }, { kind: "sit", dur: 4.5 + rand() * 3, face: FACE.east }, { kind: "walk", to: [1.5, 5.6] }, { kind: "walk", to: [1.5, 3.9] }); });
     extra.push(() => { go(5.85, 6.0); t.push({ kind: "drink", dur: 3.6, face: FACE.east }); });
   }
-  if (level >= 3) extra.push(() => { go(5.6, 2.6); t.push({ kind: "walk", to: [6.9, 2.6] }, { kind: "walk", to: [6.9, 2.02] }, { kind: "desk", dur: 5 + rand() * 2, face: FACE.board }, { kind: "walk", to: [6.9, 2.6] }); });
+  if (level >= 3) extra.push(() => { go(5.6, 2.6); t.push({ kind: "walk", to: [6.3, 2.6] }, { kind: "walk", to: [6.3, 1.62] }, { kind: "walk", to: [6.9, 1.67] }, { kind: "desk", dur: 5 + rand() * 2, face: FACE.board }, { kind: "walk", to: [6.3, 1.62] }, { kind: "walk", to: [6.3, 2.6] }); });
   extra[Math.floor(rand() * extra.length)]();
   if (rand() < 0.45) extra[Math.floor(rand() * extra.length)]();
   return t;
@@ -93,7 +93,7 @@ export function Room3D({ level, look, name, trophies, medals }: { level: number;
     let flyDart: THREE.Group | null = null;
     let dartsFor: unknown = null;
     const target = ctl.current.target;
-    Object.assign(window as unknown as Record<string, unknown>, { __room3d: ctl.current, __sim: sim });
+    Object.assign(window as unknown as Record<string, unknown>, { __room3d: ctl.current, __sim: sim, __stage: stage });
     const v = new THREE.Vector3();
 
     const clock = new THREE.Clock();
@@ -149,7 +149,8 @@ export function Room3D({ level, look, name, trophies, medals }: { level: number;
         if (sim.t >= task.dur) { sim.tasks.shift(); sim.t = 0; sim.bubble = null; if (task.kind === "throw") sim.thrown = 0; }
       }
       // Figur setzen
-      char.root.position.set(sim.x, room.floorAt(sim.x, sim.z), sim.z);
+      // Sitzhöhe: Couchkissen 0.48 m, Gaming-Stuhl 0.52 m
+      char.root.position.set(sim.x, room.floorAt(sim.x, sim.z) + (sim.pose === "sit" ? 0.04 : sim.pose === "desk" ? 0.08 : 0), sim.z);
       char.root.rotation.y = sim.rot;
       const holding = (sim.pose === "throw" && (sim.phase < 0.74 || sim.thrown < 3)) || sim.pose === "stand" || sim.pose === "walk";
       char.update(sim.pose, sim.phase, time, holding && !(sim.pose === "throw" && sim.phase >= 0.74 && sim.phase < 1), dt);

@@ -11,38 +11,45 @@ import { jerseyTextures, shade } from "./textures";
 
 const BASE = "/models/dartraum/";
 
-interface Assets { scene: THREE.Group; clips: Map<string, THREE.AnimationClip>; skin: ImageData; hair: THREE.Group }
+interface Body { scene: THREE.Group; skin: ImageData; ref: number[]; min: THREE.Vector3; max: THREE.Vector3; mat: string }
+interface Assets { bodies: Record<"regular" | "athletic", Body>; clips: Map<string, THREE.AnimationClip>; hair: THREE.Group }
 let assetsPromise: Promise<Assets> | null = null;
 
 export function loadPlayerAssets(): Promise<Assets> {
   if (assetsPromise) return assetsPromise;
   const loader = new GLTFLoader();
   loader.setMeshoptDecoder(MeshoptDecoder);
+  const img = (src: string) => new Promise<ImageData>((res, rej) => {
+    const im = new Image();
+    im.onload = () => { const c = document.createElement("canvas"); c.width = im.width; c.height = im.height; const x = c.getContext("2d")!; x.drawImage(im, 0, 0); res(x.getImageData(0, 0, c.width, c.height)); };
+    im.onerror = rej; im.src = src;
+  });
   assetsPromise = Promise.all([
-    loader.loadAsync(BASE + "player.glb"),
-    loader.loadAsync(BASE + "anims.glb"),
-    loader.loadAsync(BASE + "hair.glb"),
-    new Promise<ImageData>((res, rej) => {
-      const img = new Image();
-      img.onload = () => { const c = document.createElement("canvas"); c.width = img.width; c.height = img.height; const x = c.getContext("2d")!; x.drawImage(img, 0, 0); res(x.getImageData(0, 0, c.width, c.height)); };
-      img.onerror = rej; img.src = BASE + "skin.webp";
-    }),
-  ]).then(([p, a, h, skin]) => ({ scene: p.scene, clips: new Map(a.animations.map((c) => [c.name, c])), skin, hair: h.scene }));
+    loader.loadAsync(BASE + "player.glb"), loader.loadAsync(BASE + "player-regular.glb"),
+    loader.loadAsync(BASE + "anims.glb"), loader.loadAsync(BASE + "hair.glb"),
+    img(BASE + "skin.webp"), img(BASE + "skin-regular.webp"),
+  ]).then(([ath, reg, a, h, skinA, skinR]) => ({
+    bodies: {
+      // echte Maße der Modelle (die Positionen sind komprimiert gespeichert)
+      athletic: { scene: ath.scene, skin: skinA, ref: [205, 135, 95], min: new THREE.Vector3(-0.9294, -0.0095, -0.1634), max: new THREE.Vector3(0.9294, 1.8101, 0.128), mat: "MI_Superhero_Male" },
+      regular: { scene: reg.scene, skin: skinR, ref: [169, 114, 80], min: new THREE.Vector3(-0.8994, -0.0058, -0.1436), max: new THREE.Vector3(0.8994, 1.8101, 0.1331), mat: "MI_Regular_Male" },
+    },
+    clips: new Map(a.animations.map((c) => [c.name, c])), hair: h.scene,
+  }));
   assetsPromise.catch(() => { assetsPromise = null; });
   return assetsPromise;
 }
 
 // ---------------- Textur malen ----------------
 const hex = (h: string) => { const n = parseInt(h.replace("#", ""), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
-/** Mittlere Hautfarbe der Original-Textur, damit wir die Details (Gesicht, Hände) auf jede Hautfarbe übertragen können */
-const SKIN_REF = [205, 135, 95];
 
 function canvasData(t: THREE.Texture) {
   const img = t.image as HTMLCanvasElement;
   return { w: img.width, h: img.height, d: img.getContext("2d")!.getImageData(0, 0, img.width, img.height).data };
 }
 
-function paintBody(geo: THREE.BufferGeometry, look: Look, name: string, skinImg: ImageData) {
+function paintBody(geo: THREE.BufferGeometry, look: Look, name: string, body: Body) {
+  const skinImg = body.skin, SKIN_REF = body.ref; // SKIN_REF: mittlere Hautfarbe der Original-Textur
   const S = 1024;
   const canvas = document.createElement("canvas"); canvas.width = S; canvas.height = S;
   const ctx = canvas.getContext("2d")!;
@@ -50,7 +57,6 @@ function paintBody(geo: THREE.BufferGeometry, look: Look, name: string, skinImg:
   const o = out.data;
 
   const skin = hex(SKIN_TONES[look.skin] ?? SKIN_TONES[1]);
-  const hairC = hex(HAIR_COLORS[look.hairColor] ?? HAIR_COLORS[1]);
   const pants = PANTS.find((p) => p.id === look.pants) ?? PANTS[0];
   const shoes = SHOES.find((s) => s.id === look.shoes) ?? SHOES[0];
   const j = look.jersey;
@@ -70,7 +76,6 @@ function paintBody(geo: THREE.BufferGeometry, look: Look, name: string, skinImg:
     const x = Math.min(c.w - 1, Math.max(0, Math.floor(u * c.w))), y = Math.min(c.h - 1, Math.max(0, Math.floor(v * c.h)));
     const i = (y * c.w + x) * 4; return [c.d[i], c.d[i + 1], c.d[i + 2]];
   };
-  const mix = (a: number[], b: number[], k: number) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
 
   /** Farbe für einen Punkt auf dem Körper (Ruhepose, T-Pose, Blick nach +z) */
   const shadeAt = (x: number, y: number, z: number, nx: number, nz: number, tu: number, tv: number): number[] => {
@@ -85,11 +90,6 @@ function paintBody(geo: THREE.BufferGeometry, look: Look, name: string, skinImg:
       return skinPx;
     }
     if (y > 1.56 || (y > 1.5 && ax < 0.075)) {
-      // Kopf und Hals: Bart in die Haut malen
-      const face = z > 0.0 && y < 1.672 && y > 1.56;
-      const b = look.beard;
-      // Dreitagebart als Schatten; unter dem Vollbart-Modell dunkler, damit keine Haut durchblitzt
-      if ((b === "stubble" || b === "full") && face && y < 1.655) return mix(skinPx, hairC, b === "full" ? 0.6 : 0.38);
       return skinPx;
     }
     // Kragen-Ausschnitt
@@ -114,7 +114,7 @@ function paintBody(geo: THREE.BufferGeometry, look: Look, name: string, skinImg:
   // Positionen sind komprimiert gespeichert: auf die echten Maße des Modells zurückrechnen
   geo.computeBoundingBox();
   const bb = geo.boundingBox!;
-  const REAL_MIN = new THREE.Vector3(-0.9294, -0.0095, -0.1634), REAL_MAX = new THREE.Vector3(0.9294, 1.8101, 0.128);
+  const REAL_MIN = body.min, REAL_MAX = body.max;
   const toReal = (v: THREE.Vector3) => v.set(
     REAL_MIN.x + ((v.x - bb.min.x) / (bb.max.x - bb.min.x)) * (REAL_MAX.x - REAL_MIN.x),
     REAL_MIN.y + ((v.y - bb.min.y) / (bb.max.y - bb.min.y)) * (REAL_MAX.y - REAL_MIN.y),
@@ -153,6 +153,37 @@ function paintBody(geo: THREE.BufferGeometry, look: Look, name: string, skinImg:
   return t;
 }
 
+/** Statur: Rumpf, Bauch und Beine in der Grundhaltung breiter oder schmaler formen (die Knochen bewegen alles weiter mit) */
+function shapeBody(src: THREE.BufferGeometry, body: Body, build: string) {
+  const geo = src.clone();
+  const pos = geo.getAttribute("position") as THREE.BufferAttribute;
+  const p = new THREE.BufferAttribute(new Float32Array(pos.count * 3), 3); // ungepackt, damit feine Änderungen nicht verloren gehen
+  geo.computeBoundingBox();
+  const bb = geo.boundingBox!, mn = body.min, mx = body.max;
+  const k = (a: "x" | "y" | "z") => (mx[a] - mn[a]) / (bb.max[a] - bb.min[a]);
+  const heavy = build === "heavy";
+  const W = heavy ? 1.3 : 0.87, L = heavy ? 1.2 : 0.9;
+  const ramp = (v: number, a: number, b: number) => Math.min(1, Math.max(0, (v - a) / (b - a)));
+  for (let i = 0; i < pos.count; i++) {
+    const y = mn.y + (pos.getY(i) - bb.min.y) * k("y");
+    let x = mn.x + (pos.getX(i) - bb.min.x) * k("x"), z = mn.z + (pos.getZ(i) - bb.min.z) * k("z");
+    const ax = Math.abs(x);
+    // Rumpf (ohne Arme): voll zwischen Hüfte und Brust, weich auslaufend zu Hals und Beinen
+    const wt = Math.min(ramp(y, 0.82, 0.98), 1 - ramp(y, 1.36, 1.5)) * (1 - ramp(ax, 0.19, 0.24));
+    if (wt > 0) {
+      x *= 1 + (W - 1) * wt;
+      z = 0.0 + z * (1 + (W - 1) * 0.8 * wt);
+      if (heavy && z > 0) z *= 1 + 0.45 * wt * Math.min(ramp(y, 0.9, 1.02), 1 - ramp(y, 1.2, 1.32)); // Bauch
+    }
+    // Oberschenkel
+    const wl = Math.min(ramp(y, 0.42, 0.6), 1 - ramp(y, 0.9, 1.0)) * (1 - ramp(ax, 0.22, 0.27));
+    if (wl > 0) { const cx = Math.sign(x) * 0.1; x = cx + (x - cx) * (1 + (L - 1) * wl); z *= 1 + (L - 1) * wl; }
+    p.setXYZ(i, (x - mn.x) / k("x") + bb.min.x, (y - mn.y) / k("y") + bb.min.y, (z - mn.z) / k("z") + bb.min.z);
+  }
+  geo.setAttribute("position", p);
+  return geo;
+}
+
 // ---------------- Figur ----------------
 export interface Player {
   root: THREE.Group;
@@ -163,8 +194,8 @@ export interface Player {
 }
 
 /** Welche fertige Frisur zu welcher Auswahl gehört */
-// Lang und Dutt haben oben keinen Ansatz: dafür den Buzzcut darunterlegen
-const HAIR_MODEL: Record<string, string[]> = { short: ["Hair_SimpleParted"], buzz: ["Hair_Buzzed"], long: ["Hair_Long", "Hair_Buzzed"], bun: ["Hair_Buns", "Hair_Buzzed"], bald: [] };
+// Lang hat oben keinen Ansatz: dafür den Buzzcut darunterlegen
+const HAIR_MODEL: Record<string, string[]> = { short: ["Hair_SimpleParted"], buzz: ["Hair_Buzzed"], long: ["Hair_Long", "Hair_SimpleParted"], bald: [] };
 
 const CLIP: Record<Pose3D, string> = {
   stand: "Idle_Loop", walk: "Walk_Loop", throw: "Idle_Loop", collect: "PickUp_Table", sit: "Sitting_Idle_Loop",
@@ -174,7 +205,8 @@ const CLIP: Record<Pose3D, string> = {
 export function buildPlayer(assets: Assets, look: Look, name: string): Player {
   const disposables: { dispose: () => void }[] = [];
   const track = <T extends { dispose: () => void }>(x: T) => { disposables.push(x); return x; };
-  const model = SkeletonUtils.clone(assets.scene) as THREE.Group;
+  const bodyAsset = assets.bodies[look.build === "athletic" ? "athletic" : "regular"];
+  const model = SkeletonUtils.clone(bodyAsset.scene) as THREE.Group;
   const root = new THREE.Group();
   root.add(model);
 
@@ -185,13 +217,14 @@ export function buildPlayer(assets: Assets, look: Look, name: string): Player {
     if (!m.isMesh) return;
     m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false;
     const mat = m.material as THREE.MeshStandardMaterial;
-    if (mat.name === "MI_Superhero_Male") body = m;
+    if (mat.name === bodyAsset.mat) body = m;
     if (mat.name === "MI_Hair_1") m.material = hairMat; // Augenbrauen in Haarfarbe
   });
   if (body) {
     const b = body as THREE.SkinnedMesh;
-    const tex = track(paintBody(b.geometry, look, name, assets.skin));
+    const tex = track(paintBody(b.geometry, look, name, bodyAsset));
     b.material = track(new THREE.MeshStandardMaterial({ map: tex, roughness: 0.72 }));
+    if (look.build === "slim" || look.build === "heavy") b.geometry = track(shapeBody(b.geometry, bodyAsset, look.build));
   }
 
   const bone = (n: string) => model.getObjectByName(n) as THREE.Bone;
@@ -212,7 +245,7 @@ export function buildPlayer(assets: Assets, look: Look, name: string): Player {
     h.traverse((o) => {
       const m = o as THREE.Mesh; if (!m.isMesh) return;
       const src = m.material as THREE.MeshStandardMaterial;
-      const mat = track(src.clone()); mat.color.copy(hairTint); mat.roughness = 0.8; mat.metalness = 0;
+      const mat = track(src.clone()); mat.color.copy(hairTint); mat.roughness = 0.75; mat.metalness = 0; mat.normalScale.set(1.6, 1.6);
       m.material = mat; m.castShadow = true;
     });
     model.add(h); h.updateMatrixWorld(true); head.attach(h);
