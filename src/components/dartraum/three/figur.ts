@@ -199,18 +199,20 @@ export function buildPlayer(assets: Assets, look: Look, _name: string): Player {
   const bones = new Map<string, THREE.Bone>();
   model.traverse((o) => { if ((o as THREE.Bone).isBone) bones.set(short(o.name), o as THREE.Bone); });
   const bone = (n: string) => bones.get(n)!;
-  const head = bone("Head"), handR = bone("RightHand");
+  // Wurfseite: rechts liegt beim Modell auf -x, links auf +x
+  const S = look.hand === "l" ? "Left" : "Right", O = S === "Left" ? "Right" : "Left", sx = S === "Left" ? 1 : -1;
+  const head = bone("Head"), handR = bone(`${S}Hand`);
   root.updateMatrixWorld(true);
 
-  // Dart in der rechten Hand (Größe in Metern, unabhängig vom Modell-Maßstab)
+  // Dart in der Wurfhand (Größe in Metern, unabhängig vom Modell-Maßstab)
   const dart = buildDart(look.darts, 1.1);
   const dartHolder = new THREE.Group(); dartHolder.add(dart);
   const handPos = handR.getWorldPosition(new THREE.Vector3());
-  dartHolder.position.copy(handPos).add(new THREE.Vector3(-0.05, -0.03, 0.03));
-  dart.rotation.set(0, 0, Math.PI / 2);
+  dartHolder.position.copy(handPos).add(new THREE.Vector3(sx * 0.05, -0.03, 0.03));
+  dart.rotation.set(0, 0, -sx * Math.PI / 2);
   root.add(dartHolder); handR.attach(dartHolder);
   const cup = new THREE.Mesh(track(new THREE.CylinderGeometry(0.035, 0.03, 0.12, 14)), track(new THREE.MeshStandardMaterial({ color: "#f6c44a", roughness: 0.15, transparent: true, opacity: 0.9 })));
-  cup.position.copy(handPos).add(new THREE.Vector3(-0.05, 0, 0.05)); root.add(cup); handR.attach(cup); cup.visible = false;
+  cup.position.copy(handPos).add(new THREE.Vector3(sx * 0.05, 0, 0.05)); root.add(cup); handR.attach(cup); cup.visible = false;
 
   // Animationen
   const mixer = new THREE.AnimationMixer(model);
@@ -232,11 +234,16 @@ export function buildPlayer(assets: Assets, look: Look, _name: string): Player {
   play("Idle_Loop");
 
   const armOut = (ARM_OUT[look.build] ?? 0) + (fem && ARM_OUT[look.build] ? 0.03 : 0);
-  const armL = bone("LeftArm"), armR = bone("RightArm"), foreR = bone("RightForeArm");
+  const armL = bone("LeftArm"), armR = bone("RightArm"), armT = bone(`${S}Arm`), foreT = bone(`${S}ForeArm`);
+  const hipsB = bone("Hips"), spine2 = bone("Spine2");
+  const thighF = bone(`${S}UpLeg`), calfF = bone(`${S}Leg`), thighB = bone(`${O}UpLeg`), calfB = bone(`${O}Leg`);
+  const up = new THREE.Vector3();
   const qa = new THREE.Quaternion(), qb = new THREE.Quaternion(), qp = new THREE.Quaternion(), fwd = new THREE.Vector3();
   /** Knochen in Weltrichtung um die Vorwärtsachse der Figur drehen */
-  const spread = (bn: THREE.Bone, a: number) => {
-    bn.getWorldQuaternion(qa); qb.setFromAxisAngle(fwd, a); qa.premultiply(qb);
+  const spread = (bn: THREE.Bone, a: number) => turn(bn, a, fwd);
+  const qt = new THREE.Quaternion();
+  const turn = (bn: THREE.Bone, a: number, axis: THREE.Vector3) => {
+    bn.getWorldQuaternion(qa); qt.setFromAxisAngle(axis, a); qa.premultiply(qt);
     bn.parent!.getWorldQuaternion(qp); bn.quaternion.copy(qp.invert().multiply(qa)); bn.updateMatrixWorld(true);
   };
 
@@ -244,6 +251,7 @@ export function buildPlayer(assets: Assets, look: Look, _name: string): Player {
     void _time;
     play(CLIP[pose]);
     mixer.update(dt);
+    model.position.y = assets.lift - (pose === "throw" ? 0.025 : 0);
     dartHolder.visible = holding && pose !== "drink"; cup.visible = pose === "drink";
     root.updateMatrixWorld(true);
     if (armOut && pose !== "throw") {
@@ -255,8 +263,13 @@ export function buildPlayer(assets: Assets, look: Look, _name: string): Player {
       if (phase < 0.45) { lift = 1.25; bend = 1.7 + Math.sin(phase * 14) * 0.06; }
       else if (phase < 0.72) { const k = (phase - 0.45) / 0.27; lift = 1.25; bend = 1.7 + k * 0.5; }
       else { const k = Math.min(1, (phase - 0.72) / 0.1); lift = 1.25 + k * 0.15; bend = 2.2 - k * 2.0; }
-      setWorldDir(armR, new THREE.Vector3(-0.15, Math.sin(lift - Math.PI / 2), Math.cos(lift - Math.PI / 2)).normalize());
-      setWorldDir(foreR, new THREE.Vector3(-0.05, Math.sin(lift - Math.PI / 2 + bend), Math.cos(lift - Math.PI / 2 + bend)).normalize());
+      // Wurfstand: Körper seitlich eindrehen, Fuß der Wurfseite vorne, anderer Fuß hinten
+      up.set(0, 1, 0).applyQuaternion(root.getWorldQuaternion(qb));
+      turn(hipsB, -sx * 0.45, up); turn(spine2, sx * 0.2, up);
+      setWorldDir(thighF, new THREE.Vector3(sx * 0.06, -1, 0.32).normalize()); setWorldDir(calfF, new THREE.Vector3(sx * 0.03, -1, 0.12).normalize());
+      setWorldDir(thighB, new THREE.Vector3(-sx * 0.1, -1, -0.28).normalize()); setWorldDir(calfB, new THREE.Vector3(-sx * 0.06, -1, -0.38).normalize());
+      setWorldDir(armT, new THREE.Vector3(sx * 0.15, Math.sin(lift - Math.PI / 2), Math.cos(lift - Math.PI / 2)).normalize());
+      setWorldDir(foreT, new THREE.Vector3(sx * 0.05, Math.sin(lift - Math.PI / 2 + bend), Math.cos(lift - Math.PI / 2 + bend)).normalize());
     }
   };
 
