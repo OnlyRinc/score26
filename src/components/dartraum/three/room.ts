@@ -97,7 +97,7 @@ export function buildRoom(level: number, info: RoomInfo): BuiltRoom {
   const board = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.04, 64), boardMats);
   board.rotation.x = Math.PI / 2; board.position.set(BOARD.x, BOARD.y, 0.04); board.castShadow = true; board.receiveShadow = true;
   // Textur so drehen, dass die 20 oben steht
-  bt.center.set(0.5, 0.5); bt.rotation = Math.PI;
+  bt.center.set(0.5, 0.5); bt.rotation = Math.PI / 2;
   add(board);
   // Licht aufs Board
   const spot = new THREE.SpotLight(level === 0 ? "#ffd9a0" : "#ffffff", level === 0 ? 4 : 1.6, 8, 0.32, 0.6, 1.6);

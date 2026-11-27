@@ -13,19 +13,33 @@ import { buildPlayer, loadPlayerAssets, type Player } from "./three/figur";
 import { BOARD, OCHE_Z, buildRoom, loadFurniture, type BuiltRoom } from "./three/room";
 import { STAGE_RECT, buildItems, footprintMarker, placeObject, type BuiltItems, type UsePoint } from "./three/items";
 import { FURNITURE_BY_ID, canPlace, snap, type Placed } from "@/lib/dartraum/furniture";
+import { endVisit, legAverage, newLeg, playDart, sigmaForAverage, visitOver, type LegState } from "@/lib/dartraum/legsim";
+import { fonts } from "./three/textures";
 
 // ---------------- Ablauf ----------------
 type Task = { kind: "walk"; to: [number, number] } | { kind: Exclude<Pose3D, "walk">; dur: number; face: number; lift?: number };
 const FACE = { board: Math.PI, east: Math.PI / 2, south: 0, west: -Math.PI / 2 };
 const STAND: [number, number] = [4.08, OCHE_Z + 0.32];
-const CALLS = ["Game on!", "Ton!", "Shot!", "Double!", "Come on!", "180!!"];
+/** Test-Version: die Figur spielt im Schnitt diesen 3-Dart-Average (später aus Level und Spielerstatistik) */
+const TEST_AVERAGE = 65;
+/** Board im Raum ist größer als ein echtes: Meter pro Board-Millimeter (Board-Radius 0.36 m = 225 mm) */
+const MM = 0.36 / 225;
 
-function plan(uses: UsePoint[], rand: () => number): Task[] {
+/** Eine Aufnahme: zur Oche, 3 Pfeile, Pfeile holen. Mit Pause vorher (nach einem gewonnenen Leg) oder Pfeile holen zuerst. */
+function plan(uses: UsePoint[], rand: () => number, pause: boolean, collectFirst: boolean): Task[] {
   const t: Task[] = [];
   const go = (x: number, z: number) => t.push({ kind: "walk", to: [NaN, z] }, { kind: "walk", to: [x, z] });
+  const collect = () => t.push({ kind: "walk", to: [4, 0.62] }, { kind: "collect", dur: 1.2, face: FACE.board }, { kind: "walk", to: [4, 1.8] });
+  if (collectFirst) { collect(); return t; }
+  if (pause) breakTasks(t, go, uses, rand);
   go(...STAND);
   t.push({ kind: "throw", dur: 3 * 1.2 + 0.4, face: FACE.board });
-  t.push({ kind: "walk", to: [4, 0.62] }, { kind: "collect", dur: 1.2, face: FACE.board }, { kind: "walk", to: [4, 1.8] });
+  collect();
+  return t;
+}
+
+/** Pause zwischen zwei Legs: Möbel benutzen oder winken */
+function breakTasks(t: Task[], go: (x: number, z: number) => void, uses: UsePoint[], rand: () => number) {
   const extra: (() => void)[] = [
     () => { go(2.6 + rand() * 2.6, 3.4 + rand() * 1.0); t.push({ kind: "wave", dur: 1.6, face: FACE.south }, { kind: "stand", dur: 1 + rand() * 1.5, face: FACE.south }); },
   ];
@@ -43,12 +57,45 @@ function plan(uses: UsePoint[], rand: () => number): Task[] {
   const pick = () => extra[uses.length && rand() < 0.8 ? 1 + Math.floor(rand() * uses.length) : 0]();
   pick();
   if (rand() < 0.45) pick();
-  return t;
 }
 
 interface Sim {
   x: number; z: number; rot: number; pose: Pose3D; phase: number; tasks: Task[]; t: number;
   stuck: { x: number; y: number }[]; flying: { from: THREE.Vector3; to: [number, number]; t: number } | null; bubble: string | null; thrown: number;
+  leg: LegState; pause: boolean;
+}
+
+/** Ansage am Ende einer Aufnahme */
+function visitCall(leg: LegState): string {
+  if (leg.done) return "Game shot!";
+  if (leg.bust) return "Bust!";
+  const sum = leg.visit.reduce((a, h) => a + h.score, 0);
+  if (sum === 180) return "180!!";
+  if (sum >= 140) return `${sum}!`;
+  if (sum >= 100) return `Ton! ${sum}`;
+  return String(sum);
+}
+
+/** Kleine Anzeigetafel über dem Board: Rest, letzte Pfeile, Average */
+function drawScoreboard(ctx: CanvasRenderingContext2D, w: number, h: number, name: string, leg: LegState) {
+  const f = fonts();
+  ctx.fillStyle = "#07060a"; ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = "#d63ce0"; ctx.lineWidth = 6; ctx.strokeRect(3, 3, w - 6, h - 6);
+  ctx.textBaseline = "middle"; ctx.textAlign = "left";
+  ctx.fillStyle = "#9a93a8"; ctx.font = `600 34px ${f.display}`; ctx.fillText(name.toUpperCase().slice(0, 16), 22, 36);
+  ctx.textAlign = "right"; ctx.fillText(`LEGS ${leg.legs}`, w - 22, 36);
+  ctx.textAlign = "center"; ctx.fillStyle = leg.done ? "#5fe3f0" : "#ffffff"; ctx.font = `700 120px ${f.display}`;
+  ctx.fillText(leg.done ? "CHECK" : String(leg.rest), w / 2, 132);
+  const darts = leg.visit.length ? leg.visit : leg.lastVisit;
+  ctx.font = `600 40px ${f.display}`;
+  for (let i = 0; i < 3; i++) {
+    const x = w / 2 + (i - 1) * 150, d = darts[i];
+    ctx.fillStyle = "#1b1724"; ctx.fillRect(x - 66, 196, 132, 52);
+    ctx.fillStyle = d ? (d.mult === 3 ? "#ff5a7a" : d.mult === 2 ? "#5fe3f0" : "#ffffff") : "#3a3446";
+    ctx.fillText(d ? d.label : "–", x, 223);
+  }
+  ctx.fillStyle = "#f3d77f"; ctx.font = `600 32px ${f.display}`;
+  ctx.fillText(`Ø ${legAverage(leg).toFixed(1)}   ·   ${leg.darts} PFEILE${leg.bust ? "   ·   BUST" : ""}`, w / 2, 280);
 }
 
 /** Laufgeschwindigkeit passend zur Schrittlänge der Lauf-Animation (sonst rutschen die Füße) */
@@ -108,8 +155,22 @@ export function Room3D({ level, layout, look, name, trophies, medals, editing = 
     resize();
 
     // Ablauf
-    const sim: Sim = { x: 3.2, z: 4.2, rot: 0, pose: "stand", phase: 0, tasks: [], t: 0, stuck: [], flying: null, bubble: null, thrown: 0 };
+    const sim: Sim = { x: 3.2, z: 4.2, rot: 0, pose: "stand", phase: 0, tasks: [], t: 0, stuck: [], flying: null, bubble: null, thrown: 0, leg: newLeg(), pause: false };
     const rand = Math.random;
+    const sigma = sigmaForAverage(TEST_AVERAGE);
+    // Anzeigetafel über dem Board
+    const sbCanvas = document.createElement("canvas"); sbCanvas.width = 512; sbCanvas.height = 300;
+    const sbTex = new THREE.CanvasTexture(sbCanvas); sbTex.colorSpace = THREE.SRGBColorSpace; sbTex.anisotropy = 4;
+    const scoreboard = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.363), new THREE.MeshBasicMaterial({ map: sbTex, toneMapped: false }));
+    scoreboard.position.set(BOARD.x, 2.76, 0.035); scene.add(scoreboard);
+    const sbFrame = new THREE.Mesh(new THREE.BoxGeometry(0.67, 0.41, 0.04), new THREE.MeshStandardMaterial({ color: "#121016", roughness: 0.5 }));
+    sbFrame.position.set(BOARD.x, 2.76, 0.012); sbFrame.castShadow = true; scene.add(sbFrame);
+    let sbKey = "";
+    const drawSb = () => {
+      const l = sim.leg, key = `${l.rest}|${l.darts}|${l.visit.length}|${l.legs}|${l.bust}|${l.done}|${name_.current}`;
+      if (key === sbKey) return; sbKey = key;
+      drawScoreboard(sbCanvas.getContext("2d")!, sbCanvas.width, sbCanvas.height, name_.current, l); sbTex.needsUpdate = true;
+    };
     const stuckGroup = new THREE.Group(); scene.add(stuckGroup);
     let flyDart: THREE.Group | null = null;
     let dartsFor: unknown = null;
@@ -132,6 +193,7 @@ export function Room3D({ level, layout, look, name, trophies, medals, editing = 
       camera.lookAt(target);
       if (!char || !room || !items) { composer.render(); return; }
       if (items !== itemsSeen) { itemsSeen = items; sim.tasks = []; sim.flying = null; }
+      drawSb();
       // Pfeil-Modelle passend zum Look
       if (dartsFor !== look_.current) {
         dartsFor = look_.current;
@@ -139,7 +201,7 @@ export function Room3D({ level, layout, look, name, trophies, medals, editing = 
         flyDart.visible = false; scene.add(flyDart);
       }
 
-      if (!sim.tasks.length) sim.tasks = plan(items.uses, rand);
+      if (!sim.tasks.length) { sim.tasks = plan(items.uses, rand, sim.pause, sim.stuck.length > 0 || sim.leg.visit.length > 0); sim.pause = false; }
       const task = sim.tasks[0];
       if (task.kind === "walk") {
         const tx = Number.isNaN(task.to[0]) ? sim.x : task.to[0];
@@ -158,15 +220,28 @@ export function Room3D({ level, layout, look, name, trophies, medals, editing = 
         sim.pose = task.kind;
         if (task.kind === "throw") {
           const n = Math.floor(sim.t / 1.2), within = (sim.t % 1.2) / 1.2;
-          sim.phase = n < 3 ? within : 0.99;
-          if (n < 3 && within >= 0.74 && !sim.flying && sim.thrown <= n) {
-            const a = rand() * Math.PI * 2, rad = Math.sqrt(rand()) * 0.24;
-            sim.flying = { from: char.handWorld(new THREE.Vector3()), to: [Math.cos(a) * rad, Math.sin(a) * rad], t: 0 };
+          const over = visitOver(sim.leg);
+          sim.phase = n < 3 && !(over && n >= sim.thrown) ? within : 0.99;
+          if (n < 3 && !over && within >= 0.74 && !sim.flying && sim.thrown <= n) {
+            // echter Wurf: Ziel nach Rest wählen, mit Streuung treffen, Punkte zählen
+            const hit = playDart(sim.leg, sigma, rand);
+            let x = hit.x * MM, y = hit.y * MM;
+            const r = Math.hypot(x, y); if (r > 0.58) { x *= 0.58 / r; y *= 0.58 / r; } // daneben: steckt im Surround
+            sim.flying = { from: char.handWorld(new THREE.Vector3()), to: [x, y], t: 0 };
             sim.thrown = n + 1;
           }
-          if (sim.t > 3.5 && !sim.bubble && rand() < 0.6) sim.bubble = CALLS[Math.floor(rand() * CALLS.length)];
+          // Aufnahme vorbei (3 Pfeile, Bust oder Checkout): kurz ansagen, dann Pfeile holen
+          if (over && !sim.flying) {
+            if (!sim.bubble) sim.bubble = visitCall(sim.leg);
+            if (sim.t > sim.thrown * 1.2 + 1.6) { sim.tasks.shift(); sim.t = 0; sim.thrown = 0; }
+          }
         } else sim.phase = (sim.t / 1.8) % 1;
-        if (task.kind === "collect" && sim.t > 0.7) sim.stuck = [];
+        if (task.kind === "collect" && sim.t > 0.7 && (sim.stuck.length || sim.leg.visit.length)) {
+          sim.stuck = []; sim.bubble = null;
+          endVisit(sim.leg);
+          // Leg gewonnen: neues Leg, vorher Pause
+          if (sim.leg.done) { sim.leg = newLeg(sim.leg.legs); sim.pause = true; }
+        }
         if (sim.t >= task.dur) { sim.tasks.shift(); sim.t = 0; sim.bubble = null; if (task.kind === "throw") sim.thrown = 0; }
       }
       // Figur setzen
@@ -312,6 +387,8 @@ export function Room3D({ level, layout, look, name, trophies, medals, editing = 
   // aktueller Look für die Schleife
   const look_ = useRef(look);
   look_.current = look;
+  const name_ = useRef(name);
+  name_.current = name;
 
   // Grundraum bei Stilwechsel neu bauen
   useEffect(() => {
