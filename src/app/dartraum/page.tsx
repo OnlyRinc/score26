@@ -7,14 +7,15 @@ import { displayName, koRounds } from "@/lib/store/tournamentHelpers";
 import { ACHIEVEMENTS, computeEarnings, unlockedAchievements } from "@/lib/dartraum/economy";
 import {
   BARRELS, BARREL_FINISH, BEARDS, BUILDS, FLIGHT_DESIGNS, FLIGHT_SHAPES, GLASSES, GRIPS, HAIR_COLORS, HAIR_STYLES, HATS,
-  JERSEY_COLORS, JERSEY_DESIGNS, PANTS, ROOM_LEVELS, SANDBOX, SHAFT_LENGTHS, SHOES, SKIN_TONES,
+  JERSEY_COLORS, JERSEY_DESIGNS, PANTS, SANDBOX, SHAFT_LENGTHS, SHOES, SKIN_TONES,
   normalizeLook, type DartSetup, type Jersey, type Look,
 } from "@/lib/dartraum/catalog";
 import { Figure, FigureCard } from "@/components/dartraum/Figure";
 import { DartImage } from "@/components/dartraum/Dart";
+import { RoomTab } from "@/components/dartraum/RoomTab";
+import { ROOM_STYLES } from "@/lib/dartraum/furniture";
 import dynamic from "next/dynamic";
 const Figure3DLazy = dynamic(() => import("@/components/dartraum/Figure3D").then((m) => m.Figure3D), { ssr: false, loading: () => <div className="h-[340px]" /> });
-const Room3D = dynamic(() => import("@/components/dartraum/Room3D").then((m) => m.Room3D), { ssr: false, loading: () => <div className="grid aspect-[4/3] place-items-center rounded-3xl border border-line text-muted sm:aspect-[16/10]">3D-Raum wird geladen …</div> });
 import { Button, Card, Empty, Loading, Page, PageHeader, Segmented, cx, inputCls } from "@/components/ui";
 
 export default function DartraumPage() {
@@ -78,7 +79,7 @@ function PlayerPick() {
             <Link key={p.id} href={`/dartraum/?p=${p.id}`} className="tile rounded-3xl border border-line bg-gradient-to-b from-pink-dark/25 to-surface p-3 text-center">
               <FigureCard look={normalizeLook(dartraum[p.id]?.look)} name={displayName(p)} uid={`pp${p.id}`} size={160} className="mx-auto h-auto w-2/3" />
               <div className="mt-2 truncate font-display text-2xl uppercase">{displayName(p)}</div>
-              <div className="text-xs uppercase tracking-widest text-muted">{ROOM_LEVELS[dartraum[p.id]?.room ?? 0].name}</div>
+              <div className="text-xs uppercase tracking-widest text-muted">{(ROOM_STYLES[dartraum[p.id]?.room ?? 0] ?? ROOM_STYLES[0]).name}</div>
             </Link>
           ))}
         </div>
@@ -94,13 +95,11 @@ function Profile({ pid }: { pid: string }) {
   const player = useStore((s) => s.players[pid]);
   const profile = useStore((s) => s.dartraum[pid]) ?? emptyProfile();
   const look = useLook(pid);
-  const setRoom = useStore((s) => s.setRoom);
   const e = useEconomy(pid)!;
   const [tab, setTab] = useState<Tab>("room");
   const balance = e.total - profile.spent;
   const unlocked = unlockedAchievements(e.facts);
   const name = (look.backName || displayName(player)).toUpperCase();
-  const lvl = ROOM_LEVELS[profile.room] ?? ROOM_LEVELS[0];
 
   return (
     <Page>
@@ -109,26 +108,7 @@ function Profile({ pid }: { pid: string }) {
       <Segmented value={tab} onChange={setTab} size="lg" className="mb-5"
         options={[{ value: "room", label: "Raum" }, { value: "wardrobe", label: "Ausstatten" }, { value: "achievements", label: `Erfolge ${unlocked.size}/${ACHIEVEMENTS.length}` }, { value: "coins", label: "Coins" }]} />
 
-      {tab === "room" && (
-        <div className="space-y-4">
-          <Room3D level={lvl.level} look={look} name={name} trophies={e.facts.tournamentsWon.length} medals={unlocked.size} />
-          <Card>
-            <div className="mb-3 text-xs uppercase tracking-widest text-muted">Raumstufe wählen</div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-              {ROOM_LEVELS.map((r) => (
-                <button key={r.level} onClick={() => setRoom(pid, r.level)}
-                  className={cx("rounded-xl border px-3 py-2 text-left transition active:scale-95", r.level === lvl.level ? "border-pink bg-pink/15" : "border-line bg-surface-2/60")}>
-                  <div className="text-[10px] uppercase tracking-widest text-muted">Stufe {r.level + 1}</div>
-                  <div className="font-display text-lg uppercase leading-tight">{r.name}</div>
-                  {r.price > 0 && <div className="text-xs text-[#f3d77f]/70">später {r.price.toLocaleString("de-DE")} C</div>}
-                </button>
-              ))}
-            </div>
-            <p className="mt-3 text-sm text-muted">{lvl.desc}</p>
-          </Card>
-          <p className="text-sm text-muted">Dein Spieler wirft von selbst, holt die Pfeile, setzt sich auf die Couch oder holt sich was an der Bar. Im Regal stehen deine echten Turniersiege als Pokale und eine Medaille pro Erfolg.</p>
-        </div>
-      )}
+      {tab === "room" && <RoomTab pid={pid} look={look} name={name} trophies={e.facts.tournamentsWon.length} medals={unlocked.size} />}
 
       {tab === "wardrobe" && <Wardrobe pid={pid} look={look} defaultName={displayName(player)} />}
 

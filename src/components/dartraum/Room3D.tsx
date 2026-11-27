@@ -11,30 +11,38 @@ import type { Look } from "@/lib/dartraum/catalog";
 import { buildDart, type Pose3D } from "./three/character";
 import { buildPlayer, loadPlayerAssets, type Player } from "./three/player";
 import { BOARD, OCHE_Z, buildRoom, loadFurniture, type BuiltRoom } from "./three/room";
+import { STAGE_RECT, buildItems, footprintMarker, placeObject, type BuiltItems, type UsePoint } from "./three/items";
+import { FURNITURE_BY_ID, canPlace, snap, type Placed } from "@/lib/dartraum/furniture";
 
 // ---------------- Ablauf ----------------
-type Task = { kind: "walk"; to: [number, number] } | { kind: Exclude<Pose3D, "walk">; dur: number; face: number };
+type Task = { kind: "walk"; to: [number, number] } | { kind: Exclude<Pose3D, "walk">; dur: number; face: number; lift?: number };
 const FACE = { board: Math.PI, east: Math.PI / 2, south: 0, west: -Math.PI / 2 };
 const STAND: [number, number] = [4.08, OCHE_Z + 0.32];
 const CALLS = ["Game on!", "Ton!", "Shot!", "Double!", "Come on!", "180!!"];
 
-function plan(level: number, rand: () => number): Task[] {
+function plan(uses: UsePoint[], rand: () => number): Task[] {
   const t: Task[] = [];
   const go = (x: number, z: number) => t.push({ kind: "walk", to: [NaN, z] }, { kind: "walk", to: [x, z] });
   go(...STAND);
   t.push({ kind: "throw", dur: 3 * 1.2 + 0.4, face: FACE.board });
   t.push({ kind: "walk", to: [4, 0.62] }, { kind: "collect", dur: 1.2, face: FACE.board }, { kind: "walk", to: [4, 1.8] });
   const extra: (() => void)[] = [
-    () => { go(2.6 + rand() * 2.6, 3.2 + rand() * 1.0); t.push({ kind: "wave", dur: 1.6, face: FACE.south }, { kind: "stand", dur: 1 + rand() * 1.5, face: FACE.south }); },
+    () => { go(2.6 + rand() * 2.6, 3.4 + rand() * 1.0); t.push({ kind: "wave", dur: 1.6, face: FACE.south }, { kind: "stand", dur: 1 + rand() * 1.5, face: FACE.south }); },
   ];
-  if (level >= 2) {
-    // Weg zwischen Couch und Couchtisch hindurch, nicht durch den Tisch
-    extra.push(() => { go(1.5, 3.9); t.push({ kind: "walk", to: [1.5, 5.6] }, { kind: "walk", to: [1.14, 5.6] }, { kind: "sit", dur: 4.5 + rand() * 3, face: FACE.east }, { kind: "walk", to: [1.5, 5.6] }, { kind: "walk", to: [1.5, 3.9] }); });
-    extra.push(() => { go(5.85, 6.0); t.push({ kind: "drink", dur: 3.6, face: FACE.east }); });
+  // Alles, was im Raum steht und benutzt werden kann: Couch, Sessel, Stuhl, Bar, Streaming-Tisch
+  for (const u of uses) {
+    extra.push(() => {
+      go(u.front[0], u.front[1]);
+      t.push({ kind: "walk", to: [u.x, u.z] });
+      const dur = u.kind === "drink" ? 3.6 : 4.5 + rand() * 3;
+      t.push({ kind: u.kind, dur, face: u.face, lift: u.lift } as Task);
+      t.push({ kind: "walk", to: [u.front[0], u.front[1]] });
+    });
   }
-  if (level >= 3) extra.push(() => { go(5.6, 2.6); t.push({ kind: "walk", to: [6.3, 2.6] }, { kind: "walk", to: [6.3, 1.62] }, { kind: "walk", to: [6.9, 1.85] }, { kind: "desk", dur: 5 + rand() * 2, face: FACE.board }, { kind: "walk", to: [6.3, 1.62] }, { kind: "walk", to: [6.3, 2.6] }); });
-  extra[Math.floor(rand() * extra.length)]();
-  if (rand() < 0.45) extra[Math.floor(rand() * extra.length)]();
+  // Möbel kommen öfter dran als das Winken
+  const pick = () => extra[uses.length && rand() < 0.8 ? 1 + Math.floor(rand() * uses.length) : 0]();
+  pick();
+  if (rand() < 0.45) pick();
   return t;
 }
 
@@ -48,11 +56,21 @@ const WALK_SPEED = 0.84;
 
 const lerpAngle = (a: number, b: number, k: number) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return a + d * k; };
 
-export function Room3D({ level, look, name, trophies, medals }: { level: number; look: Look; name: string; trophies: number; medals: number }) {
+export interface Room3DProps {
+  level: number; layout: Placed[]; look: Look; name: string; trophies: number; medals: number;
+  /** Einrichten: Möbel antippen und verschieben */
+  editing?: boolean; selected?: string | null;
+  onSelect?: (uid: string | null) => void; onMove?: (p: Placed) => void;
+}
+
+export function Room3D({ level, layout, look, name, trophies, medals, editing = false, selected = null, onSelect, onMove }: Room3DProps) {
   const wrap = useRef<HTMLDivElement>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
   const ctl = useRef({ zoom: 1.15, az: 0, target: new THREE.Vector3(4, 0.9, 4) });
-  const stage = useRef<{ scene: THREE.Scene; room?: BuiltRoom; char?: Player; resize: () => void } | null>(null);
+  const stage = useRef<{ scene: THREE.Scene; room?: BuiltRoom; items?: BuiltItems; char?: Player; resize: () => void } | null>(null);
+  const [kit, setKit] = useState<THREE.Object3D | null | undefined>(undefined);
+  const layout_ = useRef(layout); layout_.current = layout;
+  const edit_ = useRef({ editing, selected, onSelect, onMove }); edit_.current = { editing, selected, onSelect, onMove };
   const [failed, setFailed] = useState(false);
 
   // Grundgerüst: Renderer, Kamera, Schleife
@@ -96,24 +114,24 @@ export function Room3D({ level, look, name, trophies, medals }: { level: number;
     let flyDart: THREE.Group | null = null;
     let dartsFor: unknown = null;
     const target = ctl.current.target;
-    Object.assign(window as unknown as Record<string, unknown>, { __room3d: ctl.current, __sim: sim, __stage: stage });
+    Object.assign(window as unknown as Record<string, unknown>, { __room3d: ctl.current, __sim: sim, __stage: stage, __cam: camera });
     const v = new THREE.Vector3();
 
     const clock = new THREE.Clock();
-    let raf = 0, levelSeen = -1, appliedZoom = ctl.current.zoom;
+    let raf = 0, appliedZoom = ctl.current.zoom;
+    let itemsSeen: BuiltItems | undefined;
     const tick = () => {
       raf = requestAnimationFrame(tick);
       const dt = Math.min(0.05, clock.getDelta()), time = clock.elapsedTime;
       const st = stage.current!;
       if (ctl.current.zoom !== appliedZoom) { appliedZoom = ctl.current.zoom; resize(); }
-      const char = st.char, room = st.room;
+      const char = st.char, room = st.room, items = st.items;
       // Kamera
       const az = ctl.current.az, dist = 20;
       camera.position.set(target.x + Math.sin(Math.PI / 4 + az) * dist, target.y + dist * 0.82, target.z + Math.cos(Math.PI / 4 + az) * dist);
       camera.lookAt(target);
-      if (!char || !room) { composer.render(); return; }
-      const lvl = (room as unknown as { level: number }).level;
-      if (lvl !== levelSeen) { levelSeen = lvl; sim.tasks = []; sim.stuck = []; sim.flying = null; }
+      if (!char || !room || !items) { composer.render(); return; }
+      if (items !== itemsSeen) { itemsSeen = items; sim.tasks = []; sim.flying = null; }
       // Pfeil-Modelle passend zum Look
       if (dartsFor !== look_.current) {
         dartsFor = look_.current;
@@ -121,7 +139,7 @@ export function Room3D({ level, look, name, trophies, medals }: { level: number;
         flyDart.visible = false; scene.add(flyDart);
       }
 
-      if (!sim.tasks.length) sim.tasks = plan(lvl, rand);
+      if (!sim.tasks.length) sim.tasks = plan(items.uses, rand);
       const task = sim.tasks[0];
       if (task.kind === "walk") {
         const tx = Number.isNaN(task.to[0]) ? sim.x : task.to[0];
@@ -152,8 +170,10 @@ export function Room3D({ level, look, name, trophies, medals }: { level: number;
         if (sim.t >= task.dur) { sim.tasks.shift(); sim.t = 0; sim.bubble = null; if (task.kind === "throw") sim.thrown = 0; }
       }
       // Figur setzen
-      // Sitzhöhe: Couchkissen 0.48 m, Gaming-Stuhl 0.52 m
-      char.root.position.set(sim.x, room.floorAt(sim.x, sim.z) + (sim.pose === "sit" ? 0.09 : sim.pose === "desk" ? 0.02 : 0), sim.z);
+      // Sitzhöhe kommt vom Möbel; auf der Bühne steht man 10 cm höher
+      const onStage = items.stage && sim.x >= STAGE_RECT.x0 && sim.x <= STAGE_RECT.x1 && sim.z >= STAGE_RECT.z0 && sim.z <= STAGE_RECT.z1;
+      const lift = task.kind !== "walk" ? task.lift ?? 0 : 0;
+      char.root.position.set(sim.x, (onStage ? STAGE_RECT.h : 0) + lift, sim.z);
       char.root.rotation.y = sim.rot;
       const holding = (sim.pose === "throw" && (sim.phase < 0.74 || sim.thrown < 3)) || sim.pose === "stand" || sim.pose === "walk";
       char.update(sim.pose, sim.phase, time, holding && !(sim.pose === "throw" && sim.phase >= 0.74 && sim.phase < 1), dt);
@@ -179,7 +199,7 @@ export function Room3D({ level, look, name, trophies, medals }: { level: number;
           stuckGroup.add(d);
         }
       }
-      room.animate(time);
+      room.animate(time); items.animate(time);
       // Sprechblase
       const b = bubbleRef.current;
       if (b) {
@@ -196,9 +216,65 @@ export function Room3D({ level, look, name, trophies, medals }: { level: number;
     // Ziehen zum Drehen, Mausrad und Zwei-Finger zum Zoomen
     const pts = new Map<number, { x: number; y: number }>();
     let pinch = 0;
-    const onDown = (e: PointerEvent) => { pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); renderer.domElement.setPointerCapture(e.pointerId); };
+    // Einrichten: Möbel antippen und auf dem Boden verschieben
+    const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hitPt = new THREE.Vector3();
+    let drag: { uid: string; orig: Placed; cur: Placed; off: [number, number]; ok: boolean } | null = null;
+    let marker: THREE.Mesh | null = null;
+    const setMarker = (p: Placed | null, ok: boolean) => {
+      if (marker) { marker.removeFromParent(); marker.geometry.dispose(); (marker.material as THREE.Material).dispose(); marker = null; }
+      if (p && !FURNITURE_BY_ID.get(p.id)?.fixed) { marker = footprintMarker(p, ok); scene.add(marker); }
+    };
+    const floorAtPointer = (e: PointerEvent) => {
+      const r = renderer.domElement.getBoundingClientRect();
+      ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      ray.setFromCamera(ndc, camera);
+      return ray.ray.intersectPlane(floorPlane, hitPt) ? [hitPt.x, hitPt.z] as [number, number] : null;
+    };
+    const pickItem = (e: PointerEvent): string | null => {
+      const items = stage.current?.items; if (!items) return null;
+      const r = renderer.domElement.getBoundingClientRect();
+      ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      ray.setFromCamera(ndc, camera);
+      for (const h of ray.intersectObjects(items.group.children, true)) {
+        let o: THREE.Object3D | null = h.object;
+        while (o && !o.userData.uid) o = o.parent;
+        const uid = o?.userData.uid as string | undefined;
+        const p = uid ? layout_.current.find((x) => x.uid === uid) : undefined;
+        if (p && !FURNITURE_BY_ID.get(p.id)?.fixed) return uid!;
+      }
+      return null;
+    };
+    const onDown = (e: PointerEvent) => {
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); renderer.domElement.setPointerCapture(e.pointerId);
+      const ed = edit_.current;
+      if (!ed.editing || pts.size > 1) { if (drag) { cancelDrag(); } return; }
+      const uid = pickItem(e);
+      ed.onSelect?.(uid);
+      const p = uid ? layout_.current.find((x) => x.uid === uid) : undefined;
+      const at = floorAtPointer(e);
+      if (p && at) { drag = { uid: p.uid, orig: p, cur: p, off: [p.x - at[0], p.z - at[1]], ok: true }; setMarker(p, true); }
+    };
+    const cancelDrag = () => {
+      if (!drag) return;
+      const o = stage.current?.items?.objects.get(drag.uid); if (o) placeObject(o, drag.orig);
+      drag = null;
+    };
     const onMove = (e: PointerEvent) => {
       const p = pts.get(e.pointerId); if (!p) return;
+      if (drag) {
+        p.x = e.clientX; p.y = e.clientY;
+        const at = floorAtPointer(e); if (!at) return;
+        const def = FURNITURE_BY_ID.get(drag.orig.id)!;
+        let next: Placed;
+        if (def.wall) {
+          // an die nähere Wand: hinten (z = 0) oder links (x = 0)
+          next = at[1] <= at[0] ? { ...drag.orig, rot: 0, x: snap(at[0]), z: 0 } : { ...drag.orig, rot: 1, x: 0, z: snap(at[1]) };
+        } else next = { ...drag.orig, x: snap(at[0] + drag.off[0]), z: snap(at[1] + drag.off[1]) };
+        drag.cur = next; drag.ok = canPlace(next, layout_.current);
+        const o = stage.current?.items?.objects.get(drag.uid); if (o) placeObject(o, next);
+        setMarker(next, drag.ok);
+        return;
+      }
       if (pts.size === 1) { ctl.current.az = Math.max(-0.65, Math.min(0.65, ctl.current.az - (e.clientX - p.x) * 0.005)); }
       p.x = e.clientX; p.y = e.clientY;
       if (pts.size === 2) {
@@ -207,7 +283,18 @@ export function Room3D({ level, look, name, trophies, medals }: { level: number;
         pinch = d;
       }
     };
-    const onUp = (e: PointerEvent) => { pts.delete(e.pointerId); pinch = 0; };
+    const onUp = (e: PointerEvent) => {
+      pts.delete(e.pointerId); pinch = 0;
+      if (drag) {
+        const d = drag; drag = null;
+        const moved = d.cur.x !== d.orig.x || d.cur.z !== d.orig.z || d.cur.rot !== d.orig.rot;
+        if (moved && d.ok) edit_.current.onMove?.(d.cur);
+        else { const o = stage.current?.items?.objects.get(d.uid); if (o) placeObject(o, d.orig); }
+        const sel = layout_.current.find((x) => x.uid === edit_.current.selected);
+        setMarker(edit_.current.editing && sel ? (moved && d.ok ? d.cur : sel) : null, true);
+      }
+    };
+    (stage.current as unknown as { setMarker: typeof setMarker }).setMarker = setMarker;
     const onWheel = (e: WheelEvent) => { e.preventDefault(); ctl.current.zoom = Math.max(0.8, Math.min(4, ctl.current.zoom * (e.deltaY < 0 ? 1.1 : 0.9))); resize(); };
     const c = renderer.domElement;
     c.addEventListener("pointerdown", onDown); c.addEventListener("pointermove", onMove); c.addEventListener("pointerup", onUp); c.addEventListener("pointercancel", onUp); c.addEventListener("wheel", onWheel, { passive: false });
@@ -215,7 +302,7 @@ export function Room3D({ level, look, name, trophies, medals }: { level: number;
     return () => {
       cancelAnimationFrame(raf); ro.disconnect();
       c.removeEventListener("pointerdown", onDown); c.removeEventListener("pointermove", onMove); c.removeEventListener("pointerup", onUp); c.removeEventListener("pointercancel", onUp); c.removeEventListener("wheel", onWheel);
-      stage.current?.room?.dispose(); stage.current?.char?.dispose();
+      stage.current?.room?.dispose(); stage.current?.items?.dispose(); stage.current?.char?.dispose();
       scene.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) m.geometry.dispose(); });
       composer.dispose(); renderer.dispose(); c.remove();
       stage.current = null;
@@ -226,19 +313,31 @@ export function Room3D({ level, look, name, trophies, medals }: { level: number;
   const look_ = useRef(look);
   look_.current = look;
 
-  // Raum bei Stufenwechsel neu bauen
+  // Grundraum bei Stilwechsel neu bauen
   useEffect(() => {
-    let cancelled = false;
-    // Möbel laden; klappt das nicht, steht der Raum eben ohne die fertigen Möbel
-    loadFurniture().catch(() => undefined).then((kit) => {
-      const st = stage.current; if (!st || cancelled) return;
-      const room = buildRoom(level, { name, trophies, medals }, kit);
-      (room as unknown as { level: number }).level = level;
-      st.room?.group.removeFromParent(); st.room?.dispose();
-      st.scene.add(room.group); st.room = room;
-    });
-    return () => { cancelled = true; };
+    const st = stage.current; if (!st) return;
+    const room = buildRoom(level, { name, trophies, medals });
+    st.room?.group.removeFromParent(); st.room?.dispose();
+    st.scene.add(room.group); st.room = room;
   }, [level, name, trophies, medals]);
+
+  // Fertige Möbel einmal laden; klappt das nicht, fehlen eben die KayKit-Teile
+  useEffect(() => { let ok = true; loadFurniture().then((k) => ok && setKit(k), () => ok && setKit(null)); return () => { ok = false; }; }, []);
+
+  // Möbel neu aufstellen, wenn sich der Aufbau ändert
+  useEffect(() => {
+    const st = stage.current; if (!st || kit === undefined) return;
+    const items = buildItems(layout, level, kit ?? undefined, { name });
+    st.items?.group.removeFromParent(); st.items?.dispose();
+    st.scene.add(items.group); st.items = items;
+  }, [layout, level, kit, name]);
+
+  // Markierung für das ausgewählte Möbel
+  useEffect(() => {
+    const st = stage.current as unknown as { setMarker?: (p: Placed | null, ok: boolean) => void } | null;
+    const sel = editing ? layout.find((p) => p.uid === selected) ?? null : null;
+    st?.setMarker?.(sel, true);
+  }, [editing, selected, layout]);
 
   // Figur bei Look-Wechsel neu bauen (Schriften vorher laden, damit der Name sauber aufs Trikot kommt)
   useEffect(() => {

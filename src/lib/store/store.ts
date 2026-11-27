@@ -7,13 +7,17 @@ import { DEFAULT_TIEBREAKERS } from "@/lib/tournament";
 import type { FixtureResult, Player, Settings, StoredMatch, Tournament, TrainingSession } from "./types";
 import type { TrainingEvent, TrainingSettings } from "@/lib/training/training";
 import { DEFAULT_LOOK, normalizeLook, type Look } from "@/lib/dartraum/catalog";
+import type { Placed } from "@/lib/dartraum/furniture";
 
 /** Dartraum-Profil eines Spielers. Verdiente Coins werden aus den Spielen berechnet, hier steht nur, was ausgegeben wurde. */
 export interface DartraumProfile {
   look: Look;
   owned: string[];
   spent: number;
+  /** Raum-Stil (Wände und Boden), 0 bis 4 */
   room: number;
+  /** Aufgestellte Möbel; fehlt es, gilt der Grundraum */
+  layout?: Placed[];
 }
 export const emptyProfile = (): DartraumProfile => ({ look: { ...DEFAULT_LOOK }, owned: [], spent: 0, room: 0 });
 
@@ -31,6 +35,8 @@ export interface AppState {
   buyRoom(playerId: string, level: number, price: number): void;
   /** Testmodus: Raumstufe frei wählen */
   setRoom(playerId: string, level: number): void;
+  /** Aufgestellte Möbel speichern */
+  setLayout(playerId: string, layout: Placed[]): void;
 
   createTraining(settings: TrainingSettings, playerId: string | undefined, playerName: string): string;
   addTrainingEvent(id: string, e: TrainingEvent): void;
@@ -228,6 +234,13 @@ export const useStore = create<AppState>()(
         set((s) => {
           const pr = s.dartraum[pid] ?? emptyProfile();
           return { dartraum: { ...s.dartraum, [pid]: { ...pr, room: level } } };
+        });
+      },
+
+      setLayout(pid, layout) {
+        set((s) => {
+          const pr = s.dartraum[pid] ?? emptyProfile();
+          return { dartraum: { ...s.dartraum, [pid]: { ...pr, layout } } };
         });
       },
 
