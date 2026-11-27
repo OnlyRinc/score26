@@ -266,12 +266,26 @@ export function buildPlayer(assets: Assets, look: Look, _name: string): Player {
       // Wurfstand: Körper seitlich eindrehen, Fuß der Wurfseite vorne, anderer Fuß hinten
       up.set(0, 1, 0).applyQuaternion(root.getWorldQuaternion(qb));
       turn(hipsB, -sx * 0.45, up); turn(spine2, sx * 0.2, up);
-      setWorldDir(thighF, new THREE.Vector3(sx * 0.06, -1, 0.32).normalize()); setWorldDir(calfF, new THREE.Vector3(sx * 0.03, -1, 0.12).normalize());
-      setWorldDir(thighB, new THREE.Vector3(-sx * 0.1, -1, -0.28).normalize()); setWorldDir(calfB, new THREE.Vector3(-sx * 0.06, -1, -0.38).normalize());
+      // Beine nur in der Richtung nachführen, die Verdrehung bleibt erhalten: vorderer Fuß Richtung Board, hinterer Fuß quer
+      turn(thighF, sx * 0.3, up); turn(thighB, -sx * 0.75, up);
+      aim(thighF, calfF, new THREE.Vector3(sx * 0.06, -1, 0.32)); aim(calfF, bone(`${S}Foot`), new THREE.Vector3(sx * 0.03, -1, 0.12));
+      aim(thighB, calfB, new THREE.Vector3(-sx * 0.1, -1, -0.28)); aim(calfB, bone(`${O}Foot`), new THREE.Vector3(-sx * 0.06, -1, -0.38));
       setWorldDir(armT, new THREE.Vector3(sx * 0.15, Math.sin(lift - Math.PI / 2), Math.cos(lift - Math.PI / 2)).normalize());
       setWorldDir(foreT, new THREE.Vector3(sx * 0.05, Math.sin(lift - Math.PI / 2 + bend), Math.cos(lift - Math.PI / 2 + bend)).normalize());
     }
   };
+
+  /** Dreht einen Knochen auf kürzestem Weg, bis er (zum Kind-Knochen hin) in die Richtung zeigt (Figurenraum); die Eigendrehung bleibt */
+  const pa = new THREE.Vector3(), pc = new THREE.Vector3(), qd = new THREE.Quaternion();
+  function aim(b: THREE.Bone, child: THREE.Bone, dir: THREE.Vector3) {
+    root.updateMatrixWorld(true);
+    b.getWorldPosition(pa); child.getWorldPosition(pc);
+    const cur = pc.sub(pa).normalize();
+    const want = dir.clone().normalize().applyQuaternion(root.getWorldQuaternion(qd));
+    qd.setFromUnitVectors(cur, want);
+    b.getWorldQuaternion(qa); qa.premultiply(qd);
+    b.parent!.getWorldQuaternion(qp); b.quaternion.copy(qp.invert().multiply(qa)); b.updateMatrixWorld(true);
+  }
 
   // Richtet einen Arm-Knochen so aus, dass seine Längsachse in die gewünschte Richtung (Figurenraum) zeigt
   const boneAxis = new Map<THREE.Bone, THREE.Vector3>();

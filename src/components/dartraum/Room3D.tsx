@@ -161,10 +161,10 @@ export function Room3D({ level, layout, look, name, trophies, medals, editing = 
     // Anzeigetafel über dem Board
     const sbCanvas = document.createElement("canvas"); sbCanvas.width = 512; sbCanvas.height = 300;
     const sbTex = new THREE.CanvasTexture(sbCanvas); sbTex.colorSpace = THREE.SRGBColorSpace; sbTex.anisotropy = 4;
-    const scoreboard = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.363), new THREE.MeshBasicMaterial({ map: sbTex, toneMapped: false }));
-    scoreboard.position.set(BOARD.x, 2.76, 0.035); scene.add(scoreboard);
-    const sbFrame = new THREE.Mesh(new THREE.BoxGeometry(0.67, 0.41, 0.04), new THREE.MeshStandardMaterial({ color: "#121016", roughness: 0.5 }));
-    sbFrame.position.set(BOARD.x, 2.76, 0.012); sbFrame.castShadow = true; scene.add(sbFrame);
+    const scoreboard = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.504), new THREE.MeshBasicMaterial({ map: sbTex, toneMapped: false }));
+    scoreboard.position.set(BOARD.x, 2.8, 0.035); scene.add(scoreboard);
+    const sbFrame = new THREE.Mesh(new THREE.BoxGeometry(0.91, 0.55, 0.04), new THREE.MeshStandardMaterial({ color: "#121016", roughness: 0.5 }));
+    sbFrame.position.set(BOARD.x, 2.8, 0.012); sbFrame.castShadow = true; scene.add(sbFrame);
     let sbKey = "";
     const drawSb = () => {
       const l = sim.leg, key = `${l.rest}|${l.darts}|${l.visit.length}|${l.legs}|${l.bust}|${l.done}|${name_.current}`;
