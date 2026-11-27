@@ -28,6 +28,7 @@ export default function PlayersPage() {
               <Card className="active:scale-[0.99]">
                 <div className="font-display text-3xl uppercase text-white">{p.nickname || p.firstName}</div>
                 <div className="text-muted">{[p.firstName, p.lastName].filter(Boolean).join(" ")}</div>
+                {p.walkOn && <div className="mt-1 truncate text-sm text-pink">♪ {p.walkOn}</div>}
                 {avgs[p.id] && (
                   <div className="mt-2 text-sm text-cyan tabular">Ø {avgs[p.id].average.toFixed(1)} · {avgs[p.id].matches} Matches</div>
                 )}

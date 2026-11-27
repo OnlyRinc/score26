@@ -7,6 +7,8 @@ export interface Player {
   firstName: string;
   lastName: string;
   nickname: string;
+  /** Walk-on-Song (Titel und Interpret), freier Text */
+  walkOn?: string;
   createdAt: number;
 }
 

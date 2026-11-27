@@ -15,7 +15,7 @@ export function PlayerDialog({ value, onClose, onCreated }: { value: Partial<Pla
     setForm(value ?? {});
   }
   const save = () => {
-    const data = { firstName: (form.firstName ?? "").trim(), lastName: (form.lastName ?? "").trim(), nickname: (form.nickname ?? "").trim() };
+    const data = { firstName: (form.firstName ?? "").trim(), lastName: (form.lastName ?? "").trim(), nickname: (form.nickname ?? "").trim(), walkOn: (form.walkOn ?? "").trim() };
     if (!data.firstName && !data.nickname) return;
     if (value?.id) updatePlayer(value.id, data);
     else {
@@ -34,6 +34,9 @@ export function PlayerDialog({ value, onClose, onCreated }: { value: Partial<Pla
           <Field label="Vorname"><input className={inputCls} value={form.firstName ?? ""} onChange={(e) => setForm({ ...form, firstName: e.target.value })} /></Field>
           <Field label="Nachname"><input className={inputCls} value={form.lastName ?? ""} onChange={(e) => setForm({ ...form, lastName: e.target.value })} /></Field>
         </div>
+        <Field label="Walk-on-Song">
+          <input className={inputCls} value={form.walkOn ?? ""} onChange={(e) => setForm({ ...form, walkOn: e.target.value })} placeholder="z. B. Chase the Sun – Planet Funk" />
+        </Field>
         <div className="flex gap-3 pt-2">
           {value?.id && (
             <Button variant="danger" onClick={() => { if (confirm("Spieler wirklich löschen?")) { deletePlayer(value.id!); onClose(); } }}>Löschen</Button>
