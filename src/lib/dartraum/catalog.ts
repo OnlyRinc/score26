@@ -69,8 +69,9 @@ export const SHOES = [
   { id: "runner", name: "Runner Neon", upper: "#5fe3f0", sole: "#f2f2f5", accent: "#d63ce0" },
 ] as const;
 
+export const GENDERS = [{ id: "m", name: "Mann" }, { id: "f", name: "Frau" }] as const;
 export const BUILDS = [
-  { id: "slim", name: "Schlank" }, { id: "normal", name: "Normal" }, { id: "athletic", name: "Athletisch" }, { id: "heavy", name: "Kräftig" },
+  { id: "slim", name: "Schlank" }, { id: "normal", name: "Normal" }, { id: "athletic", name: "Muskulös" }, { id: "heavy", name: "Kräftig" },
 ] as const;
 // Frisuren und Bart sind fertige 3D-Modelle (Quaternius, CC0), siehe public/models/dartraum/hair.glb
 export const HAIR_STYLES = [
@@ -142,6 +143,8 @@ export interface DartSetup {
 export interface Look {
   /** Statur der Figur */
   build: string;
+  /** Körperform: m oder f */
+  gender: string;
   skin: number;
   hairColor: number;
   hair: string;
@@ -158,7 +161,7 @@ export interface Look {
 }
 
 export const DEFAULT_LOOK: Look = {
-  build: "normal", skin: 1, hairColor: 1, hair: "short", beard: "none", glasses: "none", hat: "none", hatColor: "#d63ce0",
+  build: "normal", gender: "m", skin: 1, hairColor: 1, hair: "short", beard: "none", glasses: "none", hat: "none", hatColor: "#d63ce0",
   jersey: { design: "panels", primary: "#0e0e12", secondary: "#d63ce0", accent: "#5fe3f0", sponsors: true, collar: "polo" },
   pants: "black", shoes: "sneaker-white",
   darts: { barrel: "torpedo", grip: "rings", finish: "silver", shaft: "medium", shaftColor: "#0e0e12", flight: "standard", flightDesign: "club26", flightColor: "#d63ce0", flightColor2: "#5fe3f0" },
@@ -174,6 +177,7 @@ export function normalizeLook(l: Partial<Look> | undefined | null): Look {
   return {
     ...DEFAULT_LOOK,
     build: pick(src.build, BUILDS, DEFAULT_LOOK.build),
+    gender: pick(src.gender, GENDERS, DEFAULT_LOOK.gender),
     skin: typeof src.skin === "number" ? Math.min(src.skin, SKIN_TONES.length - 1) : DEFAULT_LOOK.skin,
     hairColor: typeof src.hairColor === "number" ? Math.min(src.hairColor, HAIR_COLORS.length - 1) : DEFAULT_LOOK.hairColor,
     hair: pick(OLD_HAIR[src.hair as string] ?? src.hair, HAIR_STYLES, DEFAULT_LOOK.hair),

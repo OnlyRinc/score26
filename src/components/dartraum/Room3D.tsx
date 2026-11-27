@@ -9,7 +9,7 @@ import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPa
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import type { Look } from "@/lib/dartraum/catalog";
 import { buildDart, type Pose3D } from "./three/character";
-import { buildPlayer, loadPlayerAssets, type Player } from "./three/player";
+import { buildPlayer, loadPlayerAssets, type Player } from "./three/figur";
 import { BOARD, OCHE_Z, buildRoom, loadFurniture, type BuiltRoom } from "./three/room";
 import { STAGE_RECT, buildItems, footprintMarker, placeObject, type BuiltItems, type UsePoint } from "./three/items";
 import { FURNITURE_BY_ID, canPlace, snap, type Placed } from "@/lib/dartraum/furniture";

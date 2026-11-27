@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import type { Look } from "@/lib/dartraum/catalog";
-import { buildPlayer, loadPlayerAssets, type Player } from "./three/player";
+import { buildPlayer, loadPlayerAssets, type Player } from "./three/figur";
 
 export function Figure3D({ look, name, className = "", pose = "stand" }: { look: Look; name: string; className?: string; pose?: "stand" | "wave" }) {
   const wrap = useRef<HTMLDivElement>(null);

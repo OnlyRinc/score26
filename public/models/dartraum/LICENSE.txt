@@ -5,3 +5,4 @@ Lizenz: CC0 1.0 Universal (Public Domain), https://creativecommons.org/publicdom
 Für Score26 verkleinert und komprimiert.
 - Frisuren und Bart (hair.glb): Universal Base Characters, Hairstyles, von Quaternius, CC0
 - Möbel (furniture.glb): KayKit Furniture Bits von Kay Lousberg, https://kaylousberg.itch.io, CC0
+figur.glb: Spielerfigur von Felix, erstellt mit Tripo AI (Lizenz laut Tripo-Plan von Felix prüfen).
